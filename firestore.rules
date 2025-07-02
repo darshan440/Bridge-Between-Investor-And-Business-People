@@ -1,0 +1,160 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions for role-based access control
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && getUserRole() == role;
+    }
+    
+    function hasAnyRole(roles) {
+      return isAuthenticated() && getUserRole() in roles;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isOwnerOrRole(userId, role) {
+      return isOwner(userId) || hasRole(role);
+    }
+
+    // Users collection - users can read/write their own profile
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Business Ideas collection
+    match /businessIdeas/{ideaId} {
+      // Anyone authenticated can read published business ideas
+      allow read: if isAuthenticated() && resource.data.status == 'published';
+      // Only business persons can create ideas
+      allow create: if hasRole('business_person') && 
+                       request.auth.uid == request.resource.data.userId;
+      // Only the owner can update their ideas
+      allow update: if isOwner(resource.data.userId);
+      // Only the owner can delete their ideas
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // Investment Proposals collection
+    match /investmentProposals/{proposalId} {
+      // Investors and business owners (of the target idea) can read proposals
+      allow read: if hasRole('investor') || hasRole('business_person');
+      // Only investors can create proposals
+      allow create: if hasRole('investor') && 
+                       request.auth.uid == request.resource.data.investorId;
+      // Only the investor who created it can update
+      allow update: if isOwner(resource.data.investorId);
+      // Only the investor who created it can delete
+      allow delete: if isOwner(resource.data.investorId);
+    }
+
+    // Queries collection
+    match /queries/{queryId} {
+      // Anyone authenticated can read open queries
+      allow read: if isAuthenticated();
+      // Authenticated users can create queries
+      allow create: if isAuthenticated() && 
+                       request.auth.uid == request.resource.data.userId;
+      // Only the owner can update their queries
+      allow update: if isOwner(resource.data.userId);
+      // Only the owner can delete their queries
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // Responses collection
+    match /responses/{responseId} {
+      // Anyone authenticated can read responses
+      allow read: if isAuthenticated();
+      // Only business advisors can create responses
+      allow create: if hasRole('business_advisor') && 
+                       request.auth.uid == request.resource.data.advisorId;
+      // Only the advisor who created it can update
+      allow update: if isOwner(resource.data.advisorId);
+      // Only the advisor who created it can delete
+      allow delete: if isOwner(resource.data.advisorId);
+    }
+
+    // Advisor Suggestions collection
+    match /advisorSuggestions/{suggestionId} {
+      // Anyone authenticated can read suggestions
+      allow read: if isAuthenticated();
+      // Only business advisors can create suggestions
+      allow create: if hasRole('business_advisor') && 
+                       request.auth.uid == request.resource.data.advisorId;
+      // Only the advisor who created it can update
+      allow update: if isOwner(resource.data.advisorId);
+      // Only the advisor who created it can delete
+      allow delete: if isOwner(resource.data.advisorId);
+    }
+
+    // Loan Schemes collection
+    match /loanSchemes/{schemeId} {
+      // Anyone authenticated can read active loan schemes
+      allow read: if isAuthenticated() && resource.data.status == 'active';
+      // Only bankers can create loan schemes
+      allow create: if hasRole('banker') && 
+                       request.auth.uid == request.resource.data.bankerId;
+      // Only the banker who created it can update
+      allow update: if isOwner(resource.data.bankerId);
+      // Only the banker who created it can delete
+      allow delete: if isOwner(resource.data.bankerId);
+    }
+
+    // Portfolios collection
+    match /portfolios/{investorId} {
+      // Only the investor can access their portfolio
+      allow read, write: if isOwner(investorId) && hasRole('investor');
+    }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      // Users can only update (mark as read) their own notifications
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['read', 'updatedAt']);
+      // Only cloud functions can create notifications
+      allow create: if false; // Notifications are created via Cloud Functions
+      // Users cannot delete notifications
+      allow delete: if false;
+    }
+
+    // Logs collection - read-only for authenticated users, write via Cloud Functions
+    match /logs/{logId} {
+      // Users can read their own logs, admins can read all
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid || 
+                      getUserRole() == 'admin');
+      // Only Cloud Functions can write logs
+      allow write: if false;
+    }
+
+    // Risk Assessment collection (for bankers)
+    match /riskAssessments/{assessmentId} {
+      // Only bankers and the target user can read assessments
+      allow read: if hasRole('banker') || 
+                     isOwner(resource.data.targetUserId);
+      // Only bankers can create/update assessments
+      allow write: if hasRole('banker');
+    }
+
+    // Default deny rule for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
