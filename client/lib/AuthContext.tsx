@@ -28,6 +28,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Only set up auth listener if Firebase auth is available
+    if (!auth) {
+      console.log("Firebase auth not available, skipping auth state listener");
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
 
@@ -51,10 +58,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const signOut = async () => {
-    const { signOutUser } = await import("./auth");
-    await signOutUser();
-    setCurrentUser(null);
-    setUserProfile(null);
+    if (!auth) {
+      console.log("Firebase auth not available, cannot sign out");
+      return;
+    }
+
+    try {
+      const { signOutUser } = await import("./auth");
+      await signOutUser();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      setCurrentUser(null);
+      setUserProfile(null);
+    }
   };
 
   const value: AuthContextType = {

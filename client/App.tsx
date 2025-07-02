@@ -77,7 +77,13 @@ const initializeApp = async () => {
     const { initializeMessaging } = await import("@/lib/messaging");
 
     // Initialize messaging when user is authenticated
-    const { auth } = await import("@/lib/firebase");
+    const { auth, isFirebaseEnabled } = await import("@/lib/firebase");
+
+    if (!isFirebaseEnabled || !auth) {
+      console.log("Firebase not configured, skipping messaging initialization");
+      return;
+    }
+
     auth.onAuthStateChanged((user) => {
       if (user) {
         initializeMessaging(user.uid).catch(console.error);

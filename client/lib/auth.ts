@@ -160,6 +160,10 @@ export const signInUser = async (
 
 // Sign out user
 export const signOutUser = async (): Promise<void> => {
+  if (!auth) {
+    throw new Error("Firebase auth is not available");
+  }
+
   try {
     const user = auth.currentUser;
     if (user) {
@@ -174,6 +178,8 @@ export const signOutUser = async (): Promise<void> => {
 
 // Get current user profile
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
+  if (!auth) return null;
+
   const user = auth.currentUser;
   if (!user) return null;
 
@@ -192,6 +198,8 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
 export const updateUserProfile = async (
   updates: Partial<UserProfile>,
 ): Promise<void> => {
+  if (!auth || !db) throw new Error("Firebase is not available");
+
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
@@ -212,6 +220,8 @@ export const updateUserProfile = async (
 
 // Upload profile image
 export const uploadProfileImage = async (file: File): Promise<string> => {
+  if (!auth || !storage) throw new Error("Firebase is not available");
+
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
@@ -251,6 +261,8 @@ export const resetPassword = async (email: string): Promise<void> => {
 
 // Get user role from custom claims
 export const getUserRole = async (): Promise<UserRole | null> => {
+  if (!auth) return null;
+
   const user = auth.currentUser;
   if (!user) return null;
 
