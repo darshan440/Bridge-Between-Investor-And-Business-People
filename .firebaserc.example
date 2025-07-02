@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "your-project-id",
+    "development": "your-dev-project-id",
+    "staging": "your-staging-project-id",
+    "production": "your-prod-project-id"
+  },
+  "targets": {
+    "your-project-id": {
+      "hosting": {
+        "investbridge": [
+          "your-project-id"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
