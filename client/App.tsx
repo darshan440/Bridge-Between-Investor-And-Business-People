@@ -14,6 +14,7 @@ import ViewProposals from "./pages/ViewProposals";
 import PostSolution from "./pages/PostSolution";
 import QueryPanel from "./pages/QueryPanel";
 import PostLoanSchemes from "./pages/PostLoanSchemes";
+import ViewAdvisorSuggestions from "./pages/ViewAdvisorSuggestions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,7 +31,10 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           {/* Business Person Routes */}
           <Route path="/post-idea" element={<PostIdea />} />
-          <Route path="/advisor-suggestions" element={<Dashboard />} />
+          <Route
+            path="/advisor-suggestions"
+            element={<ViewAdvisorSuggestions />}
+          />
           <Route path="/query-panel" element={<QueryPanel />} />
           {/* Investor Routes */}
           <Route path="/view-proposals" element={<ViewProposals />} />
