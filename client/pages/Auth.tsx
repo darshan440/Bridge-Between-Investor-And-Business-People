@@ -20,7 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Building, ArrowLeft, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser, signInUser } from "@/lib/auth";
-import { USER_ROLES, UserRole } from "@/lib/firebase";
+import { USER_ROLES, UserRole, isFirebaseEnabled } from "@/lib/firebase";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -125,6 +125,20 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {!isFirebaseEnabled && (
+              <Alert className="mb-6 border-yellow-200 bg-yellow-50">
+                <AlertDescription className="text-yellow-800">
+                  ⚠️ Firebase is not configured. Please set up your environment
+                  variables to enable authentication.
+                  <br />
+                  <span className="text-sm">
+                    Copy .env.example to .env and add your Firebase
+                    configuration.
+                  </span>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {error && (
               <Alert className="mb-6 border-red-200 bg-red-50">
                 <AlertDescription className="text-red-800">
@@ -213,7 +227,7 @@ export default function Auth() {
               <Button
                 type="submit"
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={!isFormValid() || loading}
+                disabled={!isFormValid() || loading || !isFirebaseEnabled}
               >
                 {loading ? (
                   <>

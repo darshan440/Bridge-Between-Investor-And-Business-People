@@ -25,6 +25,7 @@ import {
   COLLECTIONS,
   USER_ROLES,
   UserRole,
+  isFirebaseEnabled,
 } from "./firebase";
 import { logUserAction } from "./logging";
 
@@ -68,6 +69,12 @@ export const registerUser = async (
   displayName: string,
   role: UserRole,
 ): Promise<UserProfile> => {
+  if (!isFirebaseEnabled || !auth || !db) {
+    throw new Error(
+      "Firebase is not properly configured. Please check your environment variables.",
+    );
+  }
+
   try {
     // Create user account
     const userCredential = await createUserWithEmailAndPassword(
@@ -112,6 +119,12 @@ export const signInUser = async (
   email: string,
   password: string,
 ): Promise<UserProfile> => {
+  if (!isFirebaseEnabled || !auth || !db) {
+    throw new Error(
+      "Firebase is not properly configured. Please check your environment variables.",
+    );
+  }
+
   try {
     const userCredential = await signInWithEmailAndPassword(
       auth,
