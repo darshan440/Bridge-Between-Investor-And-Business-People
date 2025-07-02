@@ -16,29 +16,69 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building, ArrowLeft } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Building, ArrowLeft, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { registerUser, signInUser } from "@/lib/auth";
+import { USER_ROLES, UserRole } from "@/lib/firebase";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role: "",
+    role: "" as UserRole,
   });
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate authentication
-    console.log("Auth form submitted:", formData);
-    // Redirect to dashboard with role
-    navigate("/dashboard", { state: { role: formData.role } });
+    setLoading(true);
+    setError("");
+
+    try {
+      if (isLogin) {
+        // Sign in existing user
+        const userProfile = await signInUser(formData.email, formData.password);
+        console.log("User signed in:", userProfile);
+        navigate("/dashboard", { state: { role: userProfile.role } });
+      } else {
+        // Register new user
+        if (!formData.name || !formData.role) {
+          setError("Please fill in all required fields");
+          return;
+        }
+
+        const userProfile = await registerUser(
+          formData.email,
+          formData.password,
+          formData.name,
+          formData.role,
+        );
+        console.log("User registered:", userProfile);
+        navigate("/dashboard", { state: { role: userProfile.role } });
+      }
+    } catch (error: any) {
+      console.error("Authentication error:", error);
+      setError(error.message || "Authentication failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (error) setError("");
+  };
+
+  const isFormValid = () => {
+    if (!formData.email || !formData.password || !formData.role) return false;
+    if (!isLogin && !formData.name) return false;
+    return true;
   };
 
   return (
@@ -85,10 +125,18 @@ export default function Auth() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert className="mb-6 border-red-200 bg-red-50">
+                <AlertDescription className="text-red-800">
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name">Full Name *</Label>
                   <Input
                     id="name"
                     type="text"
@@ -97,12 +145,13 @@ export default function Auth() {
                     onChange={(e) => handleInputChange("name", e.target.value)}
                     required={!isLogin}
                     className="h-11"
+                    disabled={loading}
                   />
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Email Address *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -111,11 +160,12 @@ export default function Auth() {
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   required
                   className="h-11"
+                  disabled={loading}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password *</Label>
                 <Input
                   id="password"
                   type="password"
@@ -126,27 +176,34 @@ export default function Auth() {
                   }
                   required
                   className="h-11"
+                  disabled={loading}
+                  minLength={6}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role">I am a...</Label>
+                <Label htmlFor="role">I am a... *</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value) => handleInputChange("role", value)}
+                  onValueChange={(value) =>
+                    handleInputChange("role", value as UserRole)
+                  }
                   required
+                  disabled={loading}
                 >
                   <SelectTrigger className="h-11">
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="business_person">
+                    <SelectItem value={USER_ROLES.USER}>User</SelectItem>
+                    <SelectItem value={USER_ROLES.BUSINESS_PERSON}>
                       Business Person
                     </SelectItem>
-                    <SelectItem value="investor">Investor</SelectItem>
-                    <SelectItem value="banker">Banker</SelectItem>
-                    <SelectItem value="business_advisor">
+                    <SelectItem value={USER_ROLES.INVESTOR}>
+                      Investor
+                    </SelectItem>
+                    <SelectItem value={USER_ROLES.BANKER}>Banker</SelectItem>
+                    <SelectItem value={USER_ROLES.BUSINESS_ADVISOR}>
                       Business Advisor
                     </SelectItem>
                   </SelectContent>
@@ -156,14 +213,16 @@ export default function Auth() {
               <Button
                 type="submit"
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={
-                  !formData.email ||
-                  !formData.password ||
-                  !formData.role ||
-                  (!isLogin && !formData.name)
-                }
+                disabled={!isFormValid() || loading}
               >
-                {isLogin ? "Sign In" : "Create Account"}
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {isLogin ? "Signing In..." : "Creating Account..."}
+                  </>
+                ) : (
+                  <>{isLogin ? "Sign In" : "Create Account"}</>
+                )}
               </Button>
             </form>
 
@@ -171,8 +230,18 @@ export default function Auth() {
             <div className="mt-6 text-center">
               <button
                 type="button"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError("");
+                  setFormData({
+                    name: "",
+                    email: "",
+                    password: "",
+                    role: "" as UserRole,
+                  });
+                }}
                 className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+                disabled={loading}
               >
                 {isLogin
                   ? "Don't have an account? Sign up"
@@ -186,6 +255,11 @@ export default function Auth() {
                 <button
                   type="button"
                   className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
+                  disabled={loading}
+                  onClick={() => {
+                    // TODO: Implement forgot password
+                    alert("Forgot password functionality coming soon!");
+                  }}
                 >
                   Forgot your password?
                 </button>
@@ -196,7 +270,8 @@ export default function Auth() {
 
         {/* Security notice */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          Protected by industry-standard encryption
+          🔐 Protected by Firebase Authentication with industry-standard
+          encryption
         </div>
       </div>
     </div>
