@@ -12,19 +12,26 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:client && npm run build:server",
+    "build": "npm run build:client && npm run build:functions",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
-    "start": "node dist/server/node-build.mjs",
+    "build:functions": "cd functions && npm run build",
+    "start": "firebase serve --host 0.0.0.0",
+    "start:emulators": "firebase emulators:start",
     "test": "vitest --run",
+    "test:functions": "cd functions && npm test",
+    "deploy": "firebase deploy",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
     "format.fix": "prettier --write .",
-    "typecheck": "tsc"
+    "typecheck": "tsc && cd functions && npm run typecheck",
+    "firebase:init": "firebase init",
+    "firebase:login": "firebase login",
+    "firebase:use": "firebase use"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "firebase": "^11.10.0",
-    "firebase-admin": "^13.4.0",
-    "firebase-functions": "^6.3.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
