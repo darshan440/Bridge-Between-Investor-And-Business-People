@@ -8,16 +8,16 @@ import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 // Your Firebase config object
 // Replace with your actual Firebase config
 const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY || "your-api-key",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "your-api-key",
   authDomain:
-    process.env.VITE_FIREBASE_AUTH_DOMAIN || "your-project.firebaseapp.com",
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID || "your-project-id",
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "your-project.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "your-project-id",
   storageBucket:
-    process.env.VITE_FIREBASE_STORAGE_BUCKET || "your-project.appspot.com",
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "your-project.appspot.com",
   messagingSenderId:
-    process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-  appId: process.env.VITE_FIREBASE_APP_ID || "your-app-id",
-  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID || "G-XXXXXXXXXX",
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "your-app-id",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-XXXXXXXXXX",
 };
 
 // Initialize Firebase
@@ -40,7 +40,7 @@ isSupported().then((supported) => {
 export { messaging };
 
 // Connect to emulators in development
-if (process.env.NODE_ENV === "development") {
+if (import.meta.env.DEV) {
   // Connect to emulators if they're not already connected
   try {
     connectAuthEmulator(auth, "http://localhost:9099", {
