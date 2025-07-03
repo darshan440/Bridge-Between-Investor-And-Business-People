@@ -8,9 +8,19 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      overlay: mode === "development",
+    },
   },
   build: {
     outDir: "dist/spa",
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress certain warnings
+        if (warning.code === "EVAL") return;
+        warn(warning);
+      },
+    },
   },
   plugins: [react(), expressPlugin()],
   resolve: {
@@ -18,6 +28,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./client"),
       "@shared": path.resolve(__dirname, "./shared"),
     },
+  },
+  define: {
+    // Ensure global is defined for compatibility
+    global: "globalThis",
   },
 }));
 
