@@ -16,6 +16,8 @@ import {
   Building,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import DemoModeNotice from "@/components/DemoModeNotice";
+import { isFirebaseEnabled } from "@/lib/firebase";
 
 export default function Index() {
   return (
@@ -268,6 +270,9 @@ export default function Index() {
           </Link>
         </div>
       </section>
+
+      {/* Demo Mode Notice */}
+      {!isFirebaseEnabled && <DemoModeNotice />}
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12 px-4 sm:px-6 lg:px-8">
