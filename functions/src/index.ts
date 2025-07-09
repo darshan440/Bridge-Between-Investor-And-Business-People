@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { WebhookData } from "./types";
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -48,8 +49,8 @@ export const dailyCleanup = onSchedule("0 2 * * *", async (event) => {
 });
 
 // HTTP functions for external integrations
-export const webhookHandler = onCall(async (request) => {
-  const { data } = request;
+export const webhookHandler = onCall<WebhookData>(async (request) => {
+  const data = request.data;
   try {
     // Process webhook data
     console.log("Webhook received:", data);
@@ -83,13 +84,13 @@ export const healthCheck = onCall(async (request) => {
 });
 
 // Helper functions
-async function handlePaymentSuccess(data: any) {
+async function handlePaymentSuccess(data: Record<string, any>) {
   // Handle successful payment notifications
   console.log("Payment success:", data);
   // Update investment status, send notifications, etc.
 }
 
-async function handleInvestmentMilestone(data: any) {
+async function handleInvestmentMilestone(data: Record<string, any>) {
   // Handle investment milestone updates
   console.log("Investment milestone:", data);
   // Update portfolio metrics, send notifications, etc.
