@@ -26,6 +26,7 @@ export interface SendNotificationData {
   userId: string;
   title: string;
   body: string;
+  type?: string;
   data?: Record<string, string>;
 }
 
@@ -33,6 +34,7 @@ export interface SendBulkNotificationsData {
   userIds: string[];
   title: string;
   body: string;
+  type?: string;
   data?: Record<string, string>;
 }
 
