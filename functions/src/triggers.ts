@@ -1,12 +1,17 @@
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions";
+import {
+  onDocumentCreated,
+  onDocumentUpdated,
+} from "firebase-functions/v2/firestore";
 
 // Trigger when a new business idea is created
-export const onBusinessIdeaCreated = functions.firestore
-  .document("businessIdeas/{ideaId}")
-  .onCreate(async (snap, context) => {
+export const onBusinessIdeaCreated = onDocumentCreated(
+  "businessIdeas/{ideaId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
     const ideaData = snap.data();
-    const ideaId = context.params.ideaId;
+    const ideaId = event.params.ideaId;
 
     try {
       // Send notifications to all investors
@@ -101,14 +106,18 @@ export const onBusinessIdeaCreated = functions.firestore
     } catch (error) {
       console.error("Error in onBusinessIdeaCreated:", error);
     }
-  });
+  },
+);
 
 // Trigger when a new investment proposal is created
-export const onInvestmentProposalCreated = functions.firestore
-  .document("investmentProposals/{proposalId}")
-  .onCreate(async (snap, context) => {
+export const onInvestmentProposalCreated = onDocumentCreated(
+  "investmentProposals/{proposalId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
     const proposalData = snap.data();
-    const proposalId = context.params.proposalId;
+    const proposalId = event.params.proposalId;
 
     try {
       // Get the business idea to find the owner
@@ -176,14 +185,18 @@ export const onInvestmentProposalCreated = functions.firestore
     } catch (error) {
       console.error("Error in onInvestmentProposalCreated:", error);
     }
-  });
+  },
+);
 
 // Trigger when a new query is created
-export const onQueryCreated = functions.firestore
-  .document("queries/{queryId}")
-  .onCreate(async (snap, context) => {
+export const onQueryCreated = onDocumentCreated(
+  "queries/{queryId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
     const queryData = snap.data();
-    const queryId = context.params.queryId;
+    const queryId = event.params.queryId;
 
     try {
       // Send notifications to all business advisors
@@ -250,14 +263,18 @@ export const onQueryCreated = functions.firestore
     } catch (error) {
       console.error("Error in onQueryCreated:", error);
     }
-  });
+  },
+);
 
 // Trigger when a new response is created
-export const onResponseCreated = functions.firestore
-  .document("responses/{responseId}")
-  .onCreate(async (snap, context) => {
+export const onResponseCreated = onDocumentCreated(
+  "responses/{responseId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
     const responseData = snap.data();
-    const responseId = context.params.responseId;
+    const responseId = event.params.responseId;
 
     try {
       // Get the query to find the original asker
@@ -314,14 +331,18 @@ export const onResponseCreated = functions.firestore
     } catch (error) {
       console.error("Error in onResponseCreated:", error);
     }
-  });
+  },
+);
 
 // Trigger when a new advisor suggestion is created
-export const onAdvisorSuggestionCreated = functions.firestore
-  .document("advisorSuggestions/{suggestionId}")
-  .onCreate(async (snap, context) => {
+export const onAdvisorSuggestionCreated = onDocumentCreated(
+  "advisorSuggestions/{suggestionId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
     const suggestionData = snap.data();
-    const suggestionId = context.params.suggestionId;
+    const suggestionId = event.params.suggestionId;
 
     try {
       // Determine who to notify based on target user or general audience
@@ -398,14 +419,18 @@ export const onAdvisorSuggestionCreated = functions.firestore
     } catch (error) {
       console.error("Error in onAdvisorSuggestionCreated:", error);
     }
-  });
+  },
+);
 
 // Trigger when a new loan scheme is created
-export const onLoanSchemeCreated = functions.firestore
-  .document("loanSchemes/{schemeId}")
-  .onCreate(async (snap, context) => {
+export const onLoanSchemeCreated = onDocumentCreated(
+  "loanSchemes/{schemeId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
     const schemeData = snap.data();
-    const schemeId = context.params.schemeId;
+    const schemeId = event.params.schemeId;
 
     try {
       // Send notifications to all business persons and investors
@@ -473,15 +498,18 @@ export const onLoanSchemeCreated = functions.firestore
     } catch (error) {
       console.error("Error in onLoanSchemeCreated:", error);
     }
-  });
+  },
+);
 
 // Trigger when an investment proposal status is updated
-export const onInvestmentProposalUpdated = functions.firestore
-  .document("investmentProposals/{proposalId}")
-  .onUpdate(async (change, context) => {
-    const before = change.before.data();
-    const after = change.after.data();
-    const proposalId = context.params.proposalId;
+export const onInvestmentProposalUpdated = onDocumentUpdated(
+  "investmentProposals/{proposalId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    const proposalId = event.params.proposalId;
 
     // Only trigger if status changed
     if (before.status === after.status) {
@@ -585,4 +613,5 @@ export const onInvestmentProposalUpdated = functions.firestore
     } catch (error) {
       console.error("Error in onInvestmentProposalUpdated:", error);
     }
-  });
+  },
+);
