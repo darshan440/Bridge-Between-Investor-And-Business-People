@@ -31,7 +31,7 @@ export const generateRiskAssessment = onCall<GenerateRiskAssessmentData>(
         throw new Error("Business idea not found.");
       }
 
-      const businessIdea = businessIdeaDoc.data()!;
+      const businessIdea = businessIdeaDoc.data() as BusinessIdea;
 
       // Get user profile for additional context
       const userDoc = await admin
@@ -40,7 +40,9 @@ export const generateRiskAssessment = onCall<GenerateRiskAssessmentData>(
         .doc(businessIdea.userId)
         .get();
 
-      const userProfile = userDoc.exists ? userDoc.data()! : {};
+      const userProfile = userDoc.exists
+        ? (userDoc.data() as UserProfile)
+        : ({} as UserProfile);
 
       // Calculate risk assessment based on various factors
       const riskAssessment = calculateRiskScore(businessIdea, userProfile);
