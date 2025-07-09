@@ -1,8 +1,9 @@
 import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
+import { SetUserRoleData, PromoteToAdminData } from "./types";
 
 // Set custom claims for user role
-export const setUserRole = onCall(async (request) => {
+export const setUserRole = onCall<SetUserRoleData>(async (request) => {
   // Check if the user is authenticated
   if (!request.auth) {
     throw new Error("User must be authenticated to set role.");
@@ -52,7 +53,7 @@ export const setUserRole = onCall(async (request) => {
 // Note: User deletion cleanup is handled separately
 
 // Function to promote user to admin (called by existing admin)
-export const promoteToAdmin = onCall(async (request) => {
+export const promoteToAdmin = onCall<PromoteToAdminData>(async (request) => {
   // Check if the caller is an admin
   if (!request.auth || request.auth.token?.role !== "admin") {
     throw new Error("Only admins can promote users.");
