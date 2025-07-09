@@ -1,166 +1,52 @@
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions";
+import { onCall } from "firebase-functions/v2/https";
 
 // Send individual notification
-export const sendNotification = functions.https.onCall(
-  async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated to send notifications.",
-      );
-    }
+export const sendNotification = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error("User must be authenticated to send notifications.");
+  }
 
-    const { userId, title, body, type, data: notificationData } = data;
+  const { userId, title, body, type, data: notificationData } = request.data;
 
-    try {
-      // Create notification document
-      const notificationRef = await admin
-        .firestore()
-        .collection("notifications")
-        .add({
-          userId,
-          title,
-          body,
-          type,
-          data: notificationData || {},
-          read: false,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-      // Get user's FCM token if available
-      const userDoc = await admin
-        .firestore()
-        .collection("users")
-        .doc(userId)
-        .get();
-
-      if (userDoc.exists) {
-        const userData = userDoc.data()!;
-        const fcmToken = userData.fcmToken;
-
-        if (fcmToken) {
-          // Send FCM push notification
-          const message = {
-            token: fcmToken,
-            notification: {
-              title,
-              body,
-            },
-            data: {
-              type,
-              notificationId: notificationRef.id,
-              ...(notificationData || {}),
-            },
-            webpush: {
-              fcmOptions: {
-                link: getNotificationUrl(type, notificationData),
-              },
-            },
-          };
-
-          await admin.messaging().send(message);
-        }
-      }
-
-      // Log notification sent
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: context.auth.uid,
-          action: "NOTIFICATION_SENT",
-          data: {
-            targetUserId: userId,
-            notificationId: notificationRef.id,
-            type,
-            title,
-          },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-      return { success: true, notificationId: notificationRef.id };
-    } catch (error) {
-      console.error("Error sending notification:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to send notification.",
-      );
-    }
-  },
-);
-
-// Send bulk notifications
-export const sendBulkNotifications = functions.https.onCall(
-  async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated to send bulk notifications.",
-      );
-    }
-
-    const { userIds, title, body, type, data: notificationData } = data;
-
-    if (!Array.isArray(userIds) || userIds.length === 0) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "userIds must be a non-empty array.",
-      );
-    }
-
-    try {
-      const batch = admin.firestore().batch();
-      const notifications: any[] = [];
-
-      // Create notification documents
-      userIds.forEach((userId) => {
-        const notificationRef = admin
-          .firestore()
-          .collection("notifications")
-          .doc();
-        const notification = {
-          userId,
-          title,
-          body,
-          type,
-          data: notificationData || {},
-          read: false,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        batch.set(notificationRef, notification);
-        notifications.push({ id: notificationRef.id, ...notification });
+  try {
+    // Create notification document
+    const notificationRef = await admin
+      .firestore()
+      .collection("notifications")
+      .add({
+        userId,
+        title,
+        body,
+        type,
+        data: notificationData || {},
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      await batch.commit();
+    // Get user's FCM token if available
+    const userDoc = await admin
+      .firestore()
+      .collection("users")
+      .doc(userId)
+      .get();
 
-      // Get FCM tokens for users
-      const userDocs = await admin
-        .firestore()
-        .collection("users")
-        .where(admin.firestore.FieldPath.documentId(), "in", userIds)
-        .get();
+    if (userDoc.exists) {
+      const userData = userDoc.data()!;
+      const fcmToken = userData.fcmToken;
 
-      const fcmTokens: string[] = [];
-      userDocs.docs.forEach((doc) => {
-        const userData = doc.data();
-        if (userData.fcmToken) {
-          fcmTokens.push(userData.fcmToken);
-        }
-      });
-
-      // Send FCM push notifications
-      if (fcmTokens.length > 0) {
+      if (fcmToken) {
+        // Send FCM push notification
         const message = {
+          token: fcmToken,
           notification: {
             title,
             body,
           },
           data: {
             type,
+            notificationId: notificationRef.id,
             ...(notificationData || {}),
           },
           webpush: {
@@ -168,42 +54,137 @@ export const sendBulkNotifications = functions.https.onCall(
               link: getNotificationUrl(type, notificationData),
             },
           },
-          tokens: fcmTokens,
         };
 
-        await admin.messaging().sendMulticast(message);
+        await admin.messaging().send(message);
       }
-
-      // Log bulk notification sent
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: context.auth.uid,
-          action: "BULK_NOTIFICATION_SENT",
-          data: {
-            targetUserCount: userIds.length,
-            type,
-            title,
-            fcmTokensSent: fcmTokens.length,
-          },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-      return {
-        success: true,
-        notificationsSent: notifications.length,
-        fcmTokensSent: fcmTokens.length,
-      };
-    } catch (error) {
-      console.error("Error sending bulk notifications:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to send bulk notifications.",
-      );
     }
-  },
-);
+
+    // Log notification sent
+    await admin
+      .firestore()
+      .collection("logs")
+      .add({
+        userId: request.auth.uid,
+        action: "NOTIFICATION_SENT",
+        data: {
+          targetUserId: userId,
+          notificationId: notificationRef.id,
+          type,
+          title,
+        },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    return { success: true, notificationId: notificationRef.id };
+  } catch (error) {
+    console.error("Error sending notification:", error);
+    throw new Error("Failed to send notification.");
+  }
+});
+
+// Send bulk notifications
+export const sendBulkNotifications = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error("User must be authenticated to send bulk notifications.");
+  }
+
+  const { userIds, title, body, type, data: notificationData } = request.data;
+
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    throw new Error("userIds must be a non-empty array.");
+  }
+
+  try {
+    const batch = admin.firestore().batch();
+    const notifications: any[] = [];
+
+    // Create notification documents
+    userIds.forEach((userId) => {
+      const notificationRef = admin
+        .firestore()
+        .collection("notifications")
+        .doc();
+      const notification = {
+        userId,
+        title,
+        body,
+        type,
+        data: notificationData || {},
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      batch.set(notificationRef, notification);
+      notifications.push({ id: notificationRef.id, ...notification });
+    });
+
+    await batch.commit();
+
+    // Get FCM tokens for users
+    const userDocs = await admin
+      .firestore()
+      .collection("users")
+      .where(admin.firestore.FieldPath.documentId(), "in", userIds)
+      .get();
+
+    const fcmTokens: string[] = [];
+    userDocs.docs.forEach((doc) => {
+      const userData = doc.data();
+      if (userData.fcmToken) {
+        fcmTokens.push(userData.fcmToken);
+      }
+    });
+
+    // Send FCM push notifications
+    if (fcmTokens.length > 0) {
+      const message = {
+        notification: {
+          title,
+          body,
+        },
+        data: {
+          type,
+          ...(notificationData || {}),
+        },
+        webpush: {
+          fcmOptions: {
+            link: getNotificationUrl(type, notificationData),
+          },
+        },
+        tokens: fcmTokens,
+      };
+
+      await admin.messaging().sendMulticast(message);
+    }
+
+    // Log bulk notification sent
+    await admin
+      .firestore()
+      .collection("logs")
+      .add({
+        userId: request.auth.uid,
+        action: "BULK_NOTIFICATION_SENT",
+        data: {
+          targetUserCount: userIds.length,
+          type,
+          title,
+          fcmTokensSent: fcmTokens.length,
+        },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    return {
+      success: true,
+      notificationsSent: notifications.length,
+      fcmTokensSent: fcmTokens.length,
+    };
+  } catch (error) {
+    console.error("Error sending bulk notifications:", error);
+    throw new Error("Failed to send bulk notifications.");
+  }
+});
 
 // Clean up old notifications (scheduled function)
 export const cleanupOldNotifications = async (): Promise<void> => {
