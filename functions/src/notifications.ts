@@ -9,7 +9,7 @@ export const sendNotification = onCall<SendNotificationData>(
       throw new Error("User must be authenticated to send notifications.");
     }
 
-    const { userId, title, body, data: notificationData } = request.data;
+    const { userId, title, body, type, data: notificationData } = request.data;
 
     try {
       // Create notification document
@@ -93,7 +93,7 @@ export const sendBulkNotifications = onCall<SendBulkNotificationsData>(
       throw new Error("User must be authenticated to send bulk notifications.");
     }
 
-    const { userIds, title, body, data: notificationData } = request.data;
+    const { userIds, title, body, type, data: notificationData } = request.data;
 
     if (!Array.isArray(userIds) || userIds.length === 0) {
       throw new Error("userIds must be a non-empty array.");
