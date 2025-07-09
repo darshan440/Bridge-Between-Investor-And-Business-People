@@ -362,7 +362,7 @@ export const sendTopicNotification = onCall(async (request) => {
 // Helper function to generate notification URLs
 function getNotificationUrl(
   type: string,
-  data: Record<string, any> = {},
+  _data: Record<string, any> = {},
 ): string {
   const baseUrl = "https://localhost:8080";
 

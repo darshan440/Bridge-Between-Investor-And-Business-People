@@ -57,14 +57,14 @@ export const webhookHandler = onCall<WebhookData>(async (request) => {
 
     // Handle different webhook types
     switch (data.type) {
-      case "payment_success":
-        await handlePaymentSuccess(data.data);
-        break;
-      case "investment_milestone":
-        await handleInvestmentMilestone(data.data);
-        break;
-      default:
-        console.log("Unknown webhook type:", data.type);
+    case "payment_success":
+      await handlePaymentSuccess(data.data);
+      break;
+    case "investment_milestone":
+      await handleInvestmentMilestone(data.data);
+      break;
+    default:
+      console.log("Unknown webhook type:", data.type);
     }
 
     return { success: true };

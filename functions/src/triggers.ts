@@ -64,7 +64,7 @@ export const onBusinessIdeaCreated = onDocumentCreated(
         data: {
           type: "NEW_BUSINESS_PROPOSAL",
           ideaId: ideaId,
-          click_action: `/view-proposals`,
+          click_action: "/view-proposals",
         },
       };
 
