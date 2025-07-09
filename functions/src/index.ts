@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions";
+import { onCall } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -41,57 +42,45 @@ export { sendNotification, sendBulkNotifications };
 export { generateRiskAssessment, updatePortfolioMetrics };
 
 // Scheduled functions
-export const dailyCleanup = functions.pubsub
-  .schedule("0 2 * * *") // Run daily at 2 AM
-  .timeZone("Asia/Kolkata")
-  .onRun(async (context) => {
-    console.log("Running daily cleanup");
-    await cleanupOldNotifications();
-    return null;
-  });
+export const dailyCleanup = onSchedule("0 2 * * *", async (event) => {
+  console.log("Running daily cleanup");
+  await cleanupOldNotifications();
+  return null;
+});
 
 // HTTP functions for external integrations
-export const webhookHandler = functions.https.onRequest(async (req, res) => {
-  // Handle webhooks from external services
-  const { body, headers } = req;
-
-  // Verify webhook signature (implement based on service)
-  // const isValid = verifyWebhookSignature(body, headers);
-  // if (!isValid) {
-  //   res.status(401).send('Unauthorized');
-  //   return;
-  // }
-
+export const webhookHandler = onCall(async (request) => {
+  const { data } = request;
   try {
     // Process webhook data
-    console.log("Webhook received:", body);
+    console.log("Webhook received:", data);
 
     // Handle different webhook types
-    switch (body.type) {
+    switch (data.type) {
       case "payment_success":
-        await handlePaymentSuccess(body.data);
+        await handlePaymentSuccess(data.data);
         break;
       case "investment_milestone":
-        await handleInvestmentMilestone(body.data);
+        await handleInvestmentMilestone(data.data);
         break;
       default:
-        console.log("Unknown webhook type:", body.type);
+        console.log("Unknown webhook type:", data.type);
     }
 
-    res.status(200).send("OK");
+    return { success: true };
   } catch (error) {
     console.error("Webhook error:", error);
-    res.status(500).send("Internal Server Error");
+    throw error;
   }
 });
 
 // Health check endpoint
-export const healthCheck = functions.https.onRequest((req, res) => {
-  res.status(200).json({
+export const healthCheck = onCall(async (request) => {
+  return {
     status: "healthy",
     timestamp: admin.firestore.Timestamp.now().toDate().toISOString(),
     version: "1.0.0",
-  });
+  };
 });
 
 // Helper functions
