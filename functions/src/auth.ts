@@ -90,7 +90,7 @@ export const verifyUserEmail = onCall(async (request) => {
 
   try {
     const actionCodeSettings = {
-      url: `http://localhost:8080/auth?verified=true`,
+      url: "http://localhost:8080/auth?verified=true",
       handleCodeInApp: true,
     };
 

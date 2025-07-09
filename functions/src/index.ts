@@ -43,7 +43,7 @@ export { sendNotification, sendBulkNotifications };
 export { generateRiskAssessment, updatePortfolioMetrics };
 
 // Scheduled functions
-export const dailyCleanup = onSchedule("0 2 * * *", async (event) => {
+export const dailyCleanup = onSchedule("0 2 * * *", async (_event) => {
   console.log("Running daily cleanup");
   await cleanupOldNotifications();
 });
@@ -75,7 +75,7 @@ export const webhookHandler = onCall<WebhookData>(async (request) => {
 });
 
 // Health check endpoint
-export const healthCheck = onCall(async (request) => {
+export const healthCheck = onCall(async (_request) => {
   return {
     status: "healthy",
     timestamp: admin.firestore.Timestamp.now().toDate().toISOString(),

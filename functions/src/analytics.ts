@@ -600,7 +600,7 @@ async function generatePlatformAnalytics(): Promise<any> {
 }
 
 // Scheduled function to update all portfolio metrics daily
-export const dailyPortfolioUpdate = onSchedule("0 3 * * *", async (event) => {
+export const dailyPortfolioUpdate = onSchedule("0 3 * * *", async (_event) => {
   console.log("Running daily portfolio update");
 
   try {
