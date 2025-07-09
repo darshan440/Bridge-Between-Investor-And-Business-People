@@ -234,152 +234,125 @@ export const cleanupOldNotifications = async (): Promise<void> => {
 };
 
 // Subscribe to topic for targeted notifications
-export const subscribeToTopic = functions.https.onCall(
-  async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated.",
-      );
-    }
+export const subscribeToTopic = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error("User must be authenticated.");
+  }
 
-    const { token, topic } = data;
+  const { token, topic } = request.data;
 
-    // Validate topic
-    const validTopics = [
-      "all_users",
-      "investors",
-      "business_persons",
-      "advisors",
-      "bankers",
-      "new_proposals",
-      "funding_opportunities",
-    ];
+  // Validate topic
+  const validTopics = [
+    "all_users",
+    "investors",
+    "business_persons",
+    "advisors",
+    "bankers",
+    "new_proposals",
+    "funding_opportunities",
+  ];
 
-    if (!validTopics.includes(topic)) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Invalid topic specified.",
-      );
-    }
+  if (!validTopics.includes(topic)) {
+    throw new Error("Invalid topic specified.");
+  }
 
-    try {
-      await admin.messaging().subscribeToTopic([token], topic);
+  try {
+    await admin.messaging().subscribeToTopic([token], topic);
 
-      // Log subscription
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: context.auth.uid,
-          action: "TOPIC_SUBSCRIBED",
-          data: { topic, token: token.substring(0, 20) + "..." },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
+    // Log subscription
+    await admin
+      .firestore()
+      .collection("logs")
+      .add({
+        userId: request.auth.uid,
+        action: "TOPIC_SUBSCRIBED",
+        data: { topic, token: token.substring(0, 20) + "..." },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-      return { success: true, topic };
-    } catch (error) {
-      console.error("Error subscribing to topic:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to subscribe to topic.",
-      );
-    }
-  },
-);
+    return { success: true, topic };
+  } catch (error) {
+    console.error("Error subscribing to topic:", error);
+    throw new Error("Failed to subscribe to topic.");
+  }
+});
 
 // Unsubscribe from topic
-export const unsubscribeFromTopic = functions.https.onCall(
-  async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated.",
-      );
-    }
+export const unsubscribeFromTopic = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error("User must be authenticated.");
+  }
 
-    const { token, topic } = data;
+  const { token, topic } = request.data;
 
-    try {
-      await admin.messaging().unsubscribeFromTopic([token], topic);
+  try {
+    await admin.messaging().unsubscribeFromTopic([token], topic);
 
-      // Log unsubscription
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: context.auth.uid,
-          action: "TOPIC_UNSUBSCRIBED",
-          data: { topic, token: token.substring(0, 20) + "..." },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
+    // Log unsubscription
+    await admin
+      .firestore()
+      .collection("logs")
+      .add({
+        userId: request.auth.uid,
+        action: "TOPIC_UNSUBSCRIBED",
+        data: { topic, token: token.substring(0, 20) + "..." },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-      return { success: true, topic };
-    } catch (error) {
-      console.error("Error unsubscribing from topic:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to unsubscribe from topic.",
-      );
-    }
-  },
-);
+    return { success: true, topic };
+  } catch (error) {
+    console.error("Error unsubscribing from topic:", error);
+    throw new Error("Failed to unsubscribe from topic.");
+  }
+});
 
 // Send topic notification
-export const sendTopicNotification = functions.https.onCall(
-  async (data, context) => {
-    // Check if user has admin privileges
-    if (!context.auth || context.auth.token.role !== "admin") {
-      throw new functions.https.HttpsError(
-        "permission-denied",
-        "Only admins can send topic notifications.",
-      );
-    }
+export const sendTopicNotification = onCall(async (request) => {
+  // Check if user has admin privileges
+  if (!request.auth || request.auth.token?.role !== "admin") {
+    throw new Error("Only admins can send topic notifications.");
+  }
 
-    const { topic, title, body, data: notificationData } = data;
+  const { topic, title, body, data: notificationData } = request.data;
 
-    try {
-      const message = {
-        topic,
-        notification: {
+  try {
+    const message = {
+      topic,
+      notification: {
+        title,
+        body,
+      },
+      data: notificationData || {},
+      webpush: {
+        fcmOptions: {
+          link: getNotificationUrl("SYSTEM_NOTIFICATION", notificationData),
+        },
+      },
+    };
+
+    const response = await admin.messaging().send(message);
+
+    // Log topic notification
+    await admin
+      .firestore()
+      .collection("logs")
+      .add({
+        userId: request.auth.uid,
+        action: "TOPIC_NOTIFICATION_SENT",
+        data: {
+          topic,
           title,
-          body,
+          messageId: response,
         },
-        data: notificationData || {},
-        webpush: {
-          fcmOptions: {
-            link: getNotificationUrl("SYSTEM_NOTIFICATION", notificationData),
-          },
-        },
-      };
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-      const response = await admin.messaging().send(message);
-
-      // Log topic notification
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: context.auth.uid,
-          action: "TOPIC_NOTIFICATION_SENT",
-          data: {
-            topic,
-            title,
-            messageId: response,
-          },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-      return { success: true, messageId: response };
-    } catch (error) {
-      console.error("Error sending topic notification:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to send topic notification.",
-      );
-    }
-  },
-);
+    return { success: true, messageId: response };
+  } catch (error) {
+    console.error("Error sending topic notification:", error);
+    throw new Error("Failed to send topic notification.");
+  }
+});
 
 // Helper function to generate notification URLs
 function getNotificationUrl(
@@ -407,53 +380,45 @@ function getNotificationUrl(
 }
 
 // Get notification statistics
-export const getNotificationStats = functions.https.onCall(
-  async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated.",
-      );
-    }
+export const getNotificationStats = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error("User must be authenticated.");
+  }
 
-    try {
-      const userId = context.auth.uid;
+  try {
+    const userId = request.auth.uid;
 
-      // Get total notifications
-      const totalQuery = await admin
-        .firestore()
-        .collection("notifications")
-        .where("userId", "==", userId)
-        .get();
+    // Get total notifications
+    const totalQuery = await admin
+      .firestore()
+      .collection("notifications")
+      .where("userId", "==", userId)
+      .get();
 
-      // Get unread notifications
-      const unreadQuery = await admin
-        .firestore()
-        .collection("notifications")
-        .where("userId", "==", userId)
-        .where("read", "==", false)
-        .get();
+    // Get unread notifications
+    const unreadQuery = await admin
+      .firestore()
+      .collection("notifications")
+      .where("userId", "==", userId)
+      .where("read", "==", false)
+      .get();
 
-      // Get notifications by type
-      const notificationsByType: Record<string, number> = {};
-      totalQuery.docs.forEach((doc) => {
-        const data = doc.data();
-        const type = data.type || "UNKNOWN";
-        notificationsByType[type] = (notificationsByType[type] || 0) + 1;
-      });
+    // Get notifications by type
+    const notificationsByType: Record<string, number> = {};
+    totalQuery.docs.forEach((doc) => {
+      const data = doc.data();
+      const type = data.type || "UNKNOWN";
+      notificationsByType[type] = (notificationsByType[type] || 0) + 1;
+    });
 
-      return {
-        total: totalQuery.size,
-        unread: unreadQuery.size,
-        read: totalQuery.size - unreadQuery.size,
-        byType: notificationsByType,
-      };
-    } catch (error) {
-      console.error("Error getting notification stats:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to get notification statistics.",
-      );
-    }
-  },
-);
+    return {
+      total: totalQuery.size,
+      unread: unreadQuery.size,
+      read: totalQuery.size - unreadQuery.size,
+      byType: notificationsByType,
+    };
+  } catch (error) {
+    console.error("Error getting notification stats:", error);
+    throw new Error("Failed to get notification statistics.");
+  }
+});
