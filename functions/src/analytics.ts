@@ -1,155 +1,166 @@
 import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import {
+  GenerateRiskAssessmentData,
+  UpdatePortfolioMetricsData,
+  BusinessIdea,
+  UserProfile,
+  Investment,
+} from "./types";
 
 // Generate risk assessment for a business idea
-export const generateRiskAssessment = onCall(async (request) => {
-  // Check if user is a banker
-  if (!request.auth || request.auth.token?.role !== "banker") {
-    throw new Error("Only bankers can generate risk assessments.");
-  }
-
-  const { businessIdeaId } = request.data;
-
-  try {
-    // Get business idea details
-    const businessIdeaDoc = await admin
-      .firestore()
-      .collection("businessIdeas")
-      .doc(businessIdeaId)
-      .get();
-
-    if (!businessIdeaDoc.exists) {
-      throw new Error("Business idea not found.");
+export const generateRiskAssessment = onCall<GenerateRiskAssessmentData>(
+  async (request) => {
+    // Check if user is a banker
+    if (!request.auth || request.auth.token?.role !== "banker") {
+      throw new Error("Only bankers can generate risk assessments.");
     }
 
-    const businessIdea = businessIdeaDoc.data()!;
+    const { businessIdeaId } = request.data;
 
-    // Get user profile for additional context
-    const userDoc = await admin
-      .firestore()
-      .collection("users")
-      .doc(businessIdea.userId)
-      .get();
+    try {
+      // Get business idea details
+      const businessIdeaDoc = await admin
+        .firestore()
+        .collection("businessIdeas")
+        .doc(businessIdeaId)
+        .get();
 
-    const userProfile = userDoc.exists ? userDoc.data()! : {};
+      if (!businessIdeaDoc.exists) {
+        throw new Error("Business idea not found.");
+      }
 
-    // Calculate risk assessment based on various factors
-    const riskAssessment = calculateRiskScore(businessIdea, userProfile);
+      const businessIdea = businessIdeaDoc.data()!;
 
-    // Store risk assessment
-    const assessmentRef = await admin
-      .firestore()
-      .collection("riskAssessments")
-      .add({
-        businessIdeaId,
-        targetUserId: businessIdea.userId,
-        assessorId: request.auth.uid,
-        riskScore: riskAssessment.overallScore,
-        riskLevel: riskAssessment.riskLevel,
-        factors: riskAssessment.factors,
-        recommendations: riskAssessment.recommendations,
-        assessmentDate: admin.firestore.FieldValue.serverTimestamp(),
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Get user profile for additional context
+      const userDoc = await admin
+        .firestore()
+        .collection("users")
+        .doc(businessIdea.userId)
+        .get();
+
+      const userProfile = userDoc.exists ? userDoc.data()! : {};
+
+      // Calculate risk assessment based on various factors
+      const riskAssessment = calculateRiskScore(businessIdea, userProfile);
+
+      // Store risk assessment
+      const assessmentRef = await admin
+        .firestore()
+        .collection("riskAssessments")
+        .add({
+          businessIdeaId,
+          targetUserId: businessIdea.userId,
+          assessorId: request.auth.uid,
+          riskScore: riskAssessment.overallScore,
+          riskLevel: riskAssessment.riskLevel,
+          factors: riskAssessment.factors,
+          recommendations: riskAssessment.recommendations,
+          assessmentDate: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      // Log the assessment
+      await admin
+        .firestore()
+        .collection("logs")
+        .add({
+          userId: request.auth.uid,
+          action: "RISK_ASSESSMENT_GENERATED",
+          data: {
+            assessmentId: assessmentRef.id,
+            businessIdeaId,
+            targetUserId: businessIdea.userId,
+            riskScore: riskAssessment.overallScore,
+            riskLevel: riskAssessment.riskLevel,
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      return {
+        success: true,
+        assessmentId: assessmentRef.id,
+        riskAssessment,
+      };
+    } catch (error) {
+      console.error("Error generating risk assessment:", error);
+      throw new Error("Failed to generate risk assessment.");
+    }
+  },
+);
+
+// Update portfolio metrics for an investor
+export const updatePortfolioMetrics = onCall<UpdatePortfolioMetricsData>(
+  async (request) => {
+    if (!request.auth) {
+      throw new Error("User must be authenticated.");
+    }
+
+    const { investorId } = request.data;
+
+    // Only allow investors to update their own portfolio or bankers to update any
+    if (
+      request.auth.uid !== investorId &&
+      request.auth.token?.role !== "banker"
+    ) {
+      throw new Error("Insufficient permissions to update portfolio.");
+    }
+
+    try {
+      // Get portfolio
+      const portfolioDoc = await admin
+        .firestore()
+        .collection("portfolios")
+        .doc(investorId)
+        .get();
+
+      if (!portfolioDoc.exists) {
+        throw new Error("Portfolio not found.");
+      }
+
+      const portfolio = portfolioDoc.data()!;
+      const investments = portfolio.investments || [];
+
+      // Calculate updated metrics
+      const metrics = calculatePortfolioMetrics(investments);
+
+      // Update portfolio with new metrics
+      await admin.firestore().collection("portfolios").doc(investorId).update({
+        totalValue: metrics.totalValue,
+        roi: metrics.roi,
+        performance: metrics.performance,
+        diversification: metrics.diversification,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-    // Log the assessment
-    await admin
-      .firestore()
-      .collection("logs")
-      .add({
-        userId: request.auth.uid,
-        action: "RISK_ASSESSMENT_GENERATED",
-        data: {
-          assessmentId: assessmentRef.id,
-          businessIdeaId,
-          targetUserId: businessIdea.userId,
-          riskScore: riskAssessment.overallScore,
-          riskLevel: riskAssessment.riskLevel,
-        },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      // Log metrics update
+      await admin
+        .firestore()
+        .collection("logs")
+        .add({
+          userId: request.auth.uid,
+          action: "PORTFOLIO_METRICS_UPDATED",
+          data: {
+            investorId,
+            oldROI: portfolio.roi || 0,
+            newROI: metrics.roi,
+            totalValue: metrics.totalValue,
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
 
-    return {
-      success: true,
-      assessmentId: assessmentRef.id,
-      riskAssessment,
-    };
-  } catch (error) {
-    console.error("Error generating risk assessment:", error);
-    throw new Error("Failed to generate risk assessment.");
-  }
-});
-
-// Update portfolio metrics for an investor
-export const updatePortfolioMetrics = onCall(async (request) => {
-  if (!request.auth) {
-    throw new Error("User must be authenticated.");
-  }
-
-  const { investorId } = request.data;
-
-  // Only allow investors to update their own portfolio or bankers to update any
-  if (
-    request.auth.uid !== investorId &&
-    request.auth.token?.role !== "banker"
-  ) {
-    throw new Error("Insufficient permissions to update portfolio.");
-  }
-
-  try {
-    // Get portfolio
-    const portfolioDoc = await admin
-      .firestore()
-      .collection("portfolios")
-      .doc(investorId)
-      .get();
-
-    if (!portfolioDoc.exists) {
-      throw new Error("Portfolio not found.");
+      return {
+        success: true,
+        metrics,
+      };
+    } catch (error) {
+      console.error("Error updating portfolio metrics:", error);
+      throw new Error("Failed to update portfolio metrics.");
     }
-
-    const portfolio = portfolioDoc.data()!;
-    const investments = portfolio.investments || [];
-
-    // Calculate updated metrics
-    const metrics = calculatePortfolioMetrics(investments);
-
-    // Update portfolio with new metrics
-    await admin.firestore().collection("portfolios").doc(investorId).update({
-      totalValue: metrics.totalValue,
-      roi: metrics.roi,
-      performance: metrics.performance,
-      diversification: metrics.diversification,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Log metrics update
-    await admin
-      .firestore()
-      .collection("logs")
-      .add({
-        userId: request.auth.uid,
-        action: "PORTFOLIO_METRICS_UPDATED",
-        data: {
-          investorId,
-          oldROI: portfolio.roi || 0,
-          newROI: metrics.roi,
-          totalValue: metrics.totalValue,
-        },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-    return {
-      success: true,
-      metrics,
-    };
-  } catch (error) {
-    console.error("Error updating portfolio metrics:", error);
-    throw new Error("Failed to update portfolio metrics.");
-  }
-});
+  },
+);
 
 // Get platform analytics (admin only)
 export const getPlatformAnalytics = onCall(async (request) => {
@@ -168,8 +179,8 @@ export const getPlatformAnalytics = onCall(async (request) => {
 
 // Helper function to calculate risk score
 function calculateRiskScore(
-  businessIdea: any,
-  userProfile: any,
+  businessIdea: BusinessIdea,
+  userProfile: UserProfile,
 ): {
   overallScore: number;
   riskLevel: string;
@@ -217,7 +228,10 @@ function calculateRiskScore(
 }
 
 // Helper functions for risk assessment
-function assessMarketRisk(businessIdea: any): { score: number; details: any } {
+function assessMarketRisk(businessIdea: BusinessIdea): {
+  score: number;
+  details: any;
+} {
   let score = 50; // Base score
   const details: any = {};
 
@@ -247,7 +261,7 @@ function assessMarketRisk(businessIdea: any): { score: number; details: any } {
   return { score: Math.max(0, Math.min(100, score)), details };
 }
 
-function assessFinancialRisk(businessIdea: any): {
+function assessFinancialRisk(businessIdea: BusinessIdea): {
   score: number;
   details: any;
 } {
@@ -287,8 +301,8 @@ function assessFinancialRisk(businessIdea: any): {
 }
 
 function assessTeamRisk(
-  businessIdea: any,
-  userProfile: any,
+  businessIdea: BusinessIdea,
+  userProfile: UserProfile,
 ): { score: number; details: any } {
   let score = 50;
   const details: any = {};
@@ -319,7 +333,7 @@ function assessTeamRisk(
   return { score: Math.max(0, Math.min(100, score)), details };
 }
 
-function assessTechnologyRisk(businessIdea: any): {
+function assessTechnologyRisk(businessIdea: BusinessIdea): {
   score: number;
   details: any;
 } {
@@ -346,7 +360,7 @@ function assessTechnologyRisk(businessIdea: any): {
   return { score: Math.max(0, Math.min(100, score)), details };
 }
 
-function assessCompetitionRisk(businessIdea: any): {
+function assessCompetitionRisk(businessIdea: BusinessIdea): {
   score: number;
   details: any;
 } {
@@ -415,7 +429,7 @@ function generateRecommendations(
 }
 
 // Helper function to calculate portfolio metrics
-function calculatePortfolioMetrics(investments: any[]): {
+function calculatePortfolioMetrics(investments: Investment[]): {
   totalValue: number;
   roi: number;
   performance: any;
