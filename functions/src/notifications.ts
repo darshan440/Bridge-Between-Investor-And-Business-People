@@ -367,20 +367,20 @@ function getNotificationUrl(
   const baseUrl = "https://localhost:8080";
 
   switch (type) {
-    case "NEW_BUSINESS_PROPOSAL":
-      return `${baseUrl}/view-proposals`;
-    case "NEW_INVESTMENT_PROPOSAL":
-      return `${baseUrl}/dashboard`;
-    case "NEW_QUERY":
-      return `${baseUrl}/view-queries`;
-    case "NEW_RESPONSE":
-      return `${baseUrl}/query-panel`;
-    case "NEW_ADVISOR_TIP":
-      return `${baseUrl}/advisor-suggestions`;
-    case "PROPOSAL_STATUS_UPDATE":
-      return `${baseUrl}/portfolio`;
-    default:
-      return `${baseUrl}/dashboard`;
+  case "NEW_BUSINESS_PROPOSAL":
+    return `${baseUrl}/view-proposals`;
+  case "NEW_INVESTMENT_PROPOSAL":
+    return `${baseUrl}/dashboard`;
+  case "NEW_QUERY":
+    return `${baseUrl}/view-queries`;
+  case "NEW_RESPONSE":
+    return `${baseUrl}/query-panel`;
+  case "NEW_ADVISOR_TIP":
+    return `${baseUrl}/advisor-suggestions`;
+  case "PROPOSAL_STATUS_UPDATE":
+    return `${baseUrl}/portfolio`;
+  default:
+    return `${baseUrl}/dashboard`;
   }
 }
 
