@@ -1,87 +1,90 @@
 import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
+import { SendNotificationData, SendBulkNotificationsData } from "./types";
 
 // Send individual notification
-export const sendNotification = onCall(async (request) => {
-  if (!request.auth) {
-    throw new Error("User must be authenticated to send notifications.");
-  }
-
-  const { userId, title, body, type, data: notificationData } = request.data;
-
-  try {
-    // Create notification document
-    const notificationRef = await admin
-      .firestore()
-      .collection("notifications")
-      .add({
-        userId,
-        title,
-        body,
-        type,
-        data: notificationData || {},
-        read: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-    // Get user's FCM token if available
-    const userDoc = await admin
-      .firestore()
-      .collection("users")
-      .doc(userId)
-      .get();
-
-    if (userDoc.exists) {
-      const userData = userDoc.data()!;
-      const fcmToken = userData.fcmToken;
-
-      if (fcmToken) {
-        // Send FCM push notification
-        const message = {
-          token: fcmToken,
-          notification: {
-            title,
-            body,
-          },
-          data: {
-            type,
-            notificationId: notificationRef.id,
-            ...(notificationData || {}),
-          },
-          webpush: {
-            fcmOptions: {
-              link: getNotificationUrl(type, notificationData),
-            },
-          },
-        };
-
-        await admin.messaging().send(message);
-      }
+export const sendNotification = onCall<SendNotificationData>(
+  async (request) => {
+    if (!request.auth) {
+      throw new Error("User must be authenticated to send notifications.");
     }
 
-    // Log notification sent
-    await admin
-      .firestore()
-      .collection("logs")
-      .add({
-        userId: request.auth.uid,
-        action: "NOTIFICATION_SENT",
-        data: {
-          targetUserId: userId,
-          notificationId: notificationRef.id,
-          type,
-          title,
-        },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    const { userId, title, body, data: notificationData } = request.data;
 
-    return { success: true, notificationId: notificationRef.id };
-  } catch (error) {
-    console.error("Error sending notification:", error);
-    throw new Error("Failed to send notification.");
-  }
-});
+    try {
+      // Create notification document
+      const notificationRef = await admin
+        .firestore()
+        .collection("notifications")
+        .add({
+          userId,
+          title,
+          body,
+          type,
+          data: notificationData || {},
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      // Get user's FCM token if available
+      const userDoc = await admin
+        .firestore()
+        .collection("users")
+        .doc(userId)
+        .get();
+
+      if (userDoc.exists) {
+        const userData = userDoc.data()!;
+        const fcmToken = userData.fcmToken;
+
+        if (fcmToken) {
+          // Send FCM push notification
+          const message = {
+            token: fcmToken,
+            notification: {
+              title,
+              body,
+            },
+            data: {
+              type,
+              notificationId: notificationRef.id,
+              ...(notificationData || {}),
+            },
+            webpush: {
+              fcmOptions: {
+                link: getNotificationUrl(type, notificationData),
+              },
+            },
+          };
+
+          await admin.messaging().send(message);
+        }
+      }
+
+      // Log notification sent
+      await admin
+        .firestore()
+        .collection("logs")
+        .add({
+          userId: request.auth.uid,
+          action: "NOTIFICATION_SENT",
+          data: {
+            targetUserId: userId,
+            notificationId: notificationRef.id,
+            type,
+            title,
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      return { success: true, notificationId: notificationRef.id };
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      throw new Error("Failed to send notification.");
+    }
+  },
+);
 
 // Send bulk notifications
 export const sendBulkNotifications = onCall(async (request) => {
