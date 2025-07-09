@@ -1,202 +1,170 @@
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions";
+import { onCall } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 
 // Generate risk assessment for a business idea
-export const generateRiskAssessment = functions.https.onCall(
-  async (data, context) => {
-    // Check if user is a banker
-    if (!context.auth || context.auth.token.role !== "banker") {
-      throw new functions.https.HttpsError(
-        "permission-denied",
-        "Only bankers can generate risk assessments.",
-      );
+export const generateRiskAssessment = onCall(async (request) => {
+  // Check if user is a banker
+  if (!request.auth || request.auth.token?.role !== "banker") {
+    throw new Error("Only bankers can generate risk assessments.");
+  }
+
+  const { businessIdeaId } = request.data;
+
+  try {
+    // Get business idea details
+    const businessIdeaDoc = await admin
+      .firestore()
+      .collection("businessIdeas")
+      .doc(businessIdeaId)
+      .get();
+
+    if (!businessIdeaDoc.exists) {
+      throw new Error("Business idea not found.");
     }
 
-    const { businessIdeaId } = data;
+    const businessIdea = businessIdeaDoc.data()!;
 
-    try {
-      // Get business idea details
-      const businessIdeaDoc = await admin
-        .firestore()
-        .collection("businessIdeas")
-        .doc(businessIdeaId)
-        .get();
+    // Get user profile for additional context
+    const userDoc = await admin
+      .firestore()
+      .collection("users")
+      .doc(businessIdea.userId)
+      .get();
 
-      if (!businessIdeaDoc.exists) {
-        throw new functions.https.HttpsError(
-          "not-found",
-          "Business idea not found.",
-        );
-      }
+    const userProfile = userDoc.exists ? userDoc.data()! : {};
 
-      const businessIdea = businessIdeaDoc.data()!;
+    // Calculate risk assessment based on various factors
+    const riskAssessment = calculateRiskScore(businessIdea, userProfile);
 
-      // Get user profile for additional context
-      const userDoc = await admin
-        .firestore()
-        .collection("users")
-        .doc(businessIdea.userId)
-        .get();
-
-      const userProfile = userDoc.exists ? userDoc.data()! : {};
-
-      // Calculate risk assessment based on various factors
-      const riskAssessment = calculateRiskScore(businessIdea, userProfile);
-
-      // Store risk assessment
-      const assessmentRef = await admin
-        .firestore()
-        .collection("riskAssessments")
-        .add({
-          businessIdeaId,
-          targetUserId: businessIdea.userId,
-          assessorId: context.auth.uid,
-          riskScore: riskAssessment.overallScore,
-          riskLevel: riskAssessment.riskLevel,
-          factors: riskAssessment.factors,
-          recommendations: riskAssessment.recommendations,
-          assessmentDate: admin.firestore.FieldValue.serverTimestamp(),
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-      // Log the assessment
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: context.auth.uid,
-          action: "RISK_ASSESSMENT_GENERATED",
-          data: {
-            assessmentId: assessmentRef.id,
-            businessIdeaId,
-            targetUserId: businessIdea.userId,
-            riskScore: riskAssessment.overallScore,
-            riskLevel: riskAssessment.riskLevel,
-          },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-      return {
-        success: true,
-        assessmentId: assessmentRef.id,
-        riskAssessment,
-      };
-    } catch (error) {
-      console.error("Error generating risk assessment:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to generate risk assessment.",
-      );
-    }
-  },
-);
-
-// Update portfolio metrics for an investor
-export const updatePortfolioMetrics = functions.https.onCall(
-  async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated.",
-      );
-    }
-
-    const { investorId } = data;
-
-    // Only allow investors to update their own portfolio or bankers to update any
-    if (
-      context.auth.uid !== investorId &&
-      context.auth.token.role !== "banker"
-    ) {
-      throw new functions.https.HttpsError(
-        "permission-denied",
-        "Insufficient permissions to update portfolio.",
-      );
-    }
-
-    try {
-      // Get portfolio
-      const portfolioDoc = await admin
-        .firestore()
-        .collection("portfolios")
-        .doc(investorId)
-        .get();
-
-      if (!portfolioDoc.exists) {
-        throw new functions.https.HttpsError(
-          "not-found",
-          "Portfolio not found.",
-        );
-      }
-
-      const portfolio = portfolioDoc.data()!;
-      const investments = portfolio.investments || [];
-
-      // Calculate updated metrics
-      const metrics = calculatePortfolioMetrics(investments);
-
-      // Update portfolio with new metrics
-      await admin.firestore().collection("portfolios").doc(investorId).update({
-        totalValue: metrics.totalValue,
-        roi: metrics.roi,
-        performance: metrics.performance,
-        diversification: metrics.diversification,
+    // Store risk assessment
+    const assessmentRef = await admin
+      .firestore()
+      .collection("riskAssessments")
+      .add({
+        businessIdeaId,
+        targetUserId: businessIdea.userId,
+        assessorId: request.auth.uid,
+        riskScore: riskAssessment.overallScore,
+        riskLevel: riskAssessment.riskLevel,
+        factors: riskAssessment.factors,
+        recommendations: riskAssessment.recommendations,
+        assessmentDate: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      // Log metrics update
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: context.auth.uid,
-          action: "PORTFOLIO_METRICS_UPDATED",
-          data: {
-            investorId,
-            oldROI: portfolio.roi || 0,
-            newROI: metrics.roi,
-            totalValue: metrics.totalValue,
-          },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
+    // Log the assessment
+    await admin
+      .firestore()
+      .collection("logs")
+      .add({
+        userId: request.auth.uid,
+        action: "RISK_ASSESSMENT_GENERATED",
+        data: {
+          assessmentId: assessmentRef.id,
+          businessIdeaId,
+          targetUserId: businessIdea.userId,
+          riskScore: riskAssessment.overallScore,
+          riskLevel: riskAssessment.riskLevel,
+        },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-      return {
-        success: true,
-        metrics,
-      };
-    } catch (error) {
-      console.error("Error updating portfolio metrics:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to update portfolio metrics.",
-      );
+    return {
+      success: true,
+      assessmentId: assessmentRef.id,
+      riskAssessment,
+    };
+  } catch (error) {
+    console.error("Error generating risk assessment:", error);
+    throw new Error("Failed to generate risk assessment.");
+  }
+});
+
+// Update portfolio metrics for an investor
+export const updatePortfolioMetrics = onCall(async (request) => {
+  if (!request.auth) {
+    throw new Error("User must be authenticated.");
+  }
+
+  const { investorId } = request.data;
+
+  // Only allow investors to update their own portfolio or bankers to update any
+  if (
+    request.auth.uid !== investorId &&
+    request.auth.token?.role !== "banker"
+  ) {
+    throw new Error("Insufficient permissions to update portfolio.");
+  }
+
+  try {
+    // Get portfolio
+    const portfolioDoc = await admin
+      .firestore()
+      .collection("portfolios")
+      .doc(investorId)
+      .get();
+
+    if (!portfolioDoc.exists) {
+      throw new Error("Portfolio not found.");
     }
-  },
-);
+
+    const portfolio = portfolioDoc.data()!;
+    const investments = portfolio.investments || [];
+
+    // Calculate updated metrics
+    const metrics = calculatePortfolioMetrics(investments);
+
+    // Update portfolio with new metrics
+    await admin.firestore().collection("portfolios").doc(investorId).update({
+      totalValue: metrics.totalValue,
+      roi: metrics.roi,
+      performance: metrics.performance,
+      diversification: metrics.diversification,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Log metrics update
+    await admin
+      .firestore()
+      .collection("logs")
+      .add({
+        userId: request.auth.uid,
+        action: "PORTFOLIO_METRICS_UPDATED",
+        data: {
+          investorId,
+          oldROI: portfolio.roi || 0,
+          newROI: metrics.roi,
+          totalValue: metrics.totalValue,
+        },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    return {
+      success: true,
+      metrics,
+    };
+  } catch (error) {
+    console.error("Error updating portfolio metrics:", error);
+    throw new Error("Failed to update portfolio metrics.");
+  }
+});
 
 // Get platform analytics (admin only)
-export const getPlatformAnalytics = functions.https.onCall(
-  async (data, context) => {
-    if (!context.auth || context.auth.token.role !== "admin") {
-      throw new functions.https.HttpsError(
-        "permission-denied",
-        "Only admins can access platform analytics.",
-      );
-    }
+export const getPlatformAnalytics = onCall(async (request) => {
+  if (!request.auth || request.auth.token?.role !== "admin") {
+    throw new Error("Only admins can access platform analytics.");
+  }
 
-    try {
-      const analytics = await generatePlatformAnalytics();
-      return analytics;
-    } catch (error) {
-      console.error("Error getting platform analytics:", error);
-      throw new functions.https.HttpsError(
-        "internal",
-        "Failed to get platform analytics.",
-      );
-    }
-  },
-);
+  try {
+    const analytics = await generatePlatformAnalytics();
+    return analytics;
+  } catch (error) {
+    console.error("Error getting platform analytics:", error);
+    throw new Error("Failed to get platform analytics.");
+  }
+});
 
 // Helper function to calculate risk score
 function calculateRiskScore(
@@ -622,50 +590,47 @@ async function generatePlatformAnalytics(): Promise<any> {
 }
 
 // Scheduled function to update all portfolio metrics daily
-export const dailyPortfolioUpdate = functions.pubsub
-  .schedule("0 3 * * *") // Run daily at 3 AM
-  .timeZone("Asia/Kolkata")
-  .onRun(async (context) => {
-    console.log("Running daily portfolio update");
+export const dailyPortfolioUpdate = onSchedule("0 3 * * *", async (event) => {
+  console.log("Running daily portfolio update");
 
-    try {
-      const portfoliosQuery = await admin
-        .firestore()
-        .collection("portfolios")
-        .get();
+  try {
+    const portfoliosQuery = await admin
+      .firestore()
+      .collection("portfolios")
+      .get();
 
-      const updatePromises = portfoliosQuery.docs.map(async (doc) => {
-        const portfolio = doc.data();
-        const metrics = calculatePortfolioMetrics(portfolio.investments || []);
+    const updatePromises = portfoliosQuery.docs.map(async (doc) => {
+      const portfolio = doc.data();
+      const metrics = calculatePortfolioMetrics(portfolio.investments || []);
 
-        return admin.firestore().collection("portfolios").doc(doc.id).update({
-          totalValue: metrics.totalValue,
-          roi: metrics.roi,
-          performance: metrics.performance,
-          diversification: metrics.diversification,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+      return admin.firestore().collection("portfolios").doc(doc.id).update({
+        totalValue: metrics.totalValue,
+        roi: metrics.roi,
+        performance: metrics.performance,
+        diversification: metrics.diversification,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+    });
 
-      await Promise.all(updatePromises);
+    await Promise.all(updatePromises);
 
-      console.log(`Updated ${portfoliosQuery.size} portfolios`);
+    console.log(`Updated ${portfoliosQuery.size} portfolios`);
 
-      // Log the batch update
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: "system",
-          action: "DAILY_PORTFOLIO_UPDATE",
-          data: {
-            portfoliosUpdated: portfoliosQuery.size,
-          },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
-    } catch (error) {
-      console.error("Error in daily portfolio update:", error);
-    }
+    // Log the batch update
+    await admin
+      .firestore()
+      .collection("logs")
+      .add({
+        userId: "system",
+        action: "DAILY_PORTFOLIO_UPDATE",
+        data: {
+          portfoliosUpdated: portfoliosQuery.size,
+        },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+  } catch (error) {
+    console.error("Error in daily portfolio update:", error);
+  }
 
-    return null;
-  });
+  return null;
+});
