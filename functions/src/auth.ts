@@ -1,9 +1,5 @@
 import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
-import {
-  beforeUserCreated,
-  beforeUserSignedIn,
-} from "firebase-functions/v2/identity";
 
 // Set custom claims for user role
 export const setUserRole = onCall(async (request) => {

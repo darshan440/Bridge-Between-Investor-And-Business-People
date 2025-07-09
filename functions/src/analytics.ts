@@ -178,37 +178,31 @@ function calculateRiskScore(
 } {
   const factors: Record<string, any> = {};
   let totalScore = 0;
-  let factorCount = 0;
 
   // Market risk (20%)
   const marketRisk = assessMarketRisk(businessIdea);
   factors.marketRisk = marketRisk;
   totalScore += marketRisk.score * 0.2;
-  factorCount++;
 
   // Financial risk (25%)
   const financialRisk = assessFinancialRisk(businessIdea);
   factors.financialRisk = financialRisk;
   totalScore += financialRisk.score * 0.25;
-  factorCount++;
 
   // Team risk (20%)
   const teamRisk = assessTeamRisk(businessIdea, userProfile);
   factors.teamRisk = teamRisk;
   totalScore += teamRisk.score * 0.2;
-  factorCount++;
 
   // Technology risk (15%)
   const technologyRisk = assessTechnologyRisk(businessIdea);
   factors.technologyRisk = technologyRisk;
   totalScore += technologyRisk.score * 0.15;
-  factorCount++;
 
   // Competition risk (20%)
   const competitionRisk = assessCompetitionRisk(businessIdea);
   factors.competitionRisk = competitionRisk;
   totalScore += competitionRisk.score * 0.2;
-  factorCount++;
 
   const overallScore = Math.round(totalScore);
   const riskLevel = getRiskLevel(overallScore);
@@ -631,6 +625,4 @@ export const dailyPortfolioUpdate = onSchedule("0 3 * * *", async (event) => {
   } catch (error) {
     console.error("Error in daily portfolio update:", error);
   }
-
-  return null;
 });

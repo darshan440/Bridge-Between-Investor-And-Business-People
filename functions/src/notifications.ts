@@ -359,7 +359,7 @@ function getNotificationUrl(
   type: string,
   data: Record<string, any> = {},
 ): string {
-  const baseUrl = functions.config().app?.domain || "https://localhost:3000";
+  const baseUrl = "https://localhost:8080";
 
   switch (type) {
     case "NEW_BUSINESS_PROPOSAL":

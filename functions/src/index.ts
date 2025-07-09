@@ -6,7 +6,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 admin.initializeApp();
 
 // Import function modules
-import { setUserRole, onUserCreated } from "./auth";
+import { setUserRole } from "./auth";
 import {
   onBusinessIdeaCreated,
   onInvestmentProposalCreated,
@@ -23,7 +23,7 @@ import {
 import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
 
 // Authentication functions
-export { setUserRole, onUserCreated };
+export { setUserRole };
 
 // Firestore trigger functions
 export {
@@ -45,7 +45,6 @@ export { generateRiskAssessment, updatePortfolioMetrics };
 export const dailyCleanup = onSchedule("0 2 * * *", async (event) => {
   console.log("Running daily cleanup");
   await cleanupOldNotifications();
-  return null;
 });
 
 // HTTP functions for external integrations
