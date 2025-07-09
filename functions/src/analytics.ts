@@ -1,20 +1,9 @@
 import * as admin from "firebase-admin";
-import { onCall } from "firebase-functions/v2/https";
-import { onSchedule } from "firebase-functions/v2/scheduler";
-import {
-  GenerateRiskAssessmentData,
-  UpdatePortfolioMetricsData,
-  BusinessIdea,
-  UserProfile,
-  Investment,
-  Portfolio,
-  RiskFactor,
-  PlatformAnalytics,
-} from "./types";
+import * as functions from "firebase-functions/v1";
 
 // Generate risk assessment for a business idea
-export const generateRiskAssessment = onCall<GenerateRiskAssessmentData>(
-  async (request) => {
+export const generateRiskAssessment = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
     // Check if user is a banker
     if (!request.auth || request.auth.token?.role !== "banker") {
       throw new Error("Only bankers can generate risk assessments.");
@@ -97,10 +86,13 @@ export const generateRiskAssessment = onCall<GenerateRiskAssessmentData>(
 );
 
 // Update portfolio metrics for an investor
-export const updatePortfolioMetrics = onCall<UpdatePortfolioMetricsData>(
-  async (request) => {
-    if (!request.auth) {
-      throw new Error("User must be authenticated.");
+export const updatePortfolioMetrics = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be authenticated.",
+      );
     }
 
     const { investorId } = request.data;
@@ -172,10 +164,14 @@ export const updatePortfolioMetrics = onCall<UpdatePortfolioMetricsData>(
 );
 
 // Get platform analytics (admin only)
-export const getPlatformAnalytics = onCall(async (request) => {
-  if (!request.auth || request.auth.token?.role !== "admin") {
-    throw new Error("Only admins can access platform analytics.");
-  }
+export const getPlatformAnalytics = functions.https.onCall(
+  async (data, context: functions.https.CallableContext) => {
+    if (!context.auth || context.auth.token.role !== "admin") {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Only admins can access platform analytics.",
+      );
+    }
 
   try {
     const analytics = await generatePlatformAnalytics();

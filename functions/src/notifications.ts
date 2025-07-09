@@ -1,12 +1,14 @@
 import * as admin from "firebase-admin";
-import { onCall } from "firebase-functions/v2/https";
-import { SendNotificationData, SendBulkNotificationsData } from "./types";
+import * as functions from "firebase-functions/v1";
 
 // Send individual notification
-export const sendNotification = onCall<SendNotificationData>(
-  async (request) => {
-    if (!request.auth) {
-      throw new Error("User must be authenticated to send notifications.");
+export const sendNotification = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    if (!context || !context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be authenticated to send notifications.",
+      );
     }
 
     const { userId, title, body, type, data: notificationData } = request.data;
