@@ -47,13 +47,13 @@ export const sendNotification = onCall<SendNotificationData>(
               body,
             },
             data: {
-              type,
+              type: type || "GENERAL",
               notificationId: notificationRef.id,
               ...(notificationData || {}),
             },
             webpush: {
               fcmOptions: {
-                link: getNotificationUrl(type, notificationData),
+                link: getNotificationUrl(type || "GENERAL", notificationData),
               },
             },
           };
@@ -149,12 +149,12 @@ export const sendBulkNotifications = onCall<SendBulkNotificationsData>(
             body,
           },
           data: {
-            type,
+            type: type || "GENERAL",
             ...(notificationData || {}),
           },
           webpush: {
             fcmOptions: {
-              link: getNotificationUrl(type, notificationData),
+              link: getNotificationUrl(type || "GENERAL", notificationData),
             },
           },
           tokens: fcmTokens,
