@@ -289,7 +289,12 @@ export const onResponseCreated = onDocumentCreated(
         return;
       }
 
-      const query = queryDoc.data()!;
+      const queryData = queryDoc.data();
+      if (!queryData) {
+        console.error("Query data not found:", responseData.queryId);
+        return;
+      }
+      const query = queryData;
 
       // Send notification to query owner
       await admin
