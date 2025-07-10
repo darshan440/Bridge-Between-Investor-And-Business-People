@@ -214,7 +214,7 @@ export const onQueryCreated = onDocumentCreated(
         .where("role", "==", "business_advisor")
         .get();
 
-      const notifications: any[] = [];
+      const notifications: Array<Record<string, unknown>> = [];
 
       advisorsQuery.docs.forEach((advisorDoc) => {
         notifications.push({
@@ -375,7 +375,7 @@ export const onAdvisorSuggestionCreated = onDocumentCreated(
         targetUserIds = businessPersonsQuery.docs.map((doc) => doc.id);
       }
 
-      const notifications: any[] = [];
+      const notifications: Array<Record<string, unknown>> = [];
 
       targetUserIds.forEach((userId) => {
         notifications.push({
@@ -542,7 +542,15 @@ export const onInvestmentProposalUpdated = onDocumentUpdated(
         return;
       }
 
-      const businessIdea = businessIdeaDoc.data()!;
+      const businessIdeaData = businessIdeaDoc.data();
+      if (!businessIdeaData) {
+        console.error(
+          "Business idea data not found:",
+          oldProposal.businessIdeaId,
+        );
+        return;
+      }
+      const businessIdea = businessIdeaData;
 
       // Send notification to investor about status change
       await admin
