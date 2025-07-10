@@ -453,7 +453,7 @@ export const onLoanSchemeCreated = onDocumentCreated(
         .where("role", "in", ["business_person", "investor"])
         .get();
 
-      const notifications: any[] = [];
+      const notifications: Array<Record<string, unknown>> = [];
 
       usersQuery.docs.forEach((userDoc) => {
         notifications.push({
