@@ -7,6 +7,7 @@ import {
   BusinessIdea,
   UserProfile,
   Investment,
+  Portfolio,
   RiskFactor,
   PlatformAnalytics,
 } from "./types";
