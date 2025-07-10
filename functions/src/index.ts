@@ -57,14 +57,14 @@ export const webhookHandler = onCall<WebhookData>(async (request) => {
 
     // Handle different webhook types
     switch (data.type) {
-    case "payment_success":
-      await handlePaymentSuccess(data.data);
-      break;
-    case "investment_milestone":
-      await handleInvestmentMilestone(data.data);
-      break;
-    default:
-      console.log("Unknown webhook type:", data.type);
+      case "payment_success":
+        await handlePaymentSuccess(data.data);
+        break;
+      case "investment_milestone":
+        await handleInvestmentMilestone(data.data);
+        break;
+      default:
+        console.log("Unknown webhook type:", data.type);
     }
 
     return { success: true };
@@ -84,13 +84,13 @@ export const healthCheck = onCall(async (_request) => {
 });
 
 // Helper functions
-async function handlePaymentSuccess(data: Record<string, any>) {
+async function handlePaymentSuccess(data: Record<string, unknown>) {
   // Handle successful payment notifications
   console.log("Payment success:", data);
   // Update investment status, send notifications, etc.
 }
 
-async function handleInvestmentMilestone(data: Record<string, any>) {
+async function handleInvestmentMilestone(data: Record<string, unknown>) {
   // Handle investment milestone updates
   console.log("Investment milestone:", data);
   // Update portfolio metrics, send notifications, etc.
