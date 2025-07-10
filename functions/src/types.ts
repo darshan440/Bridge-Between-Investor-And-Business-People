@@ -1,5 +1,10 @@
 // Type definitions for Firebase Cloud Functions
 
+export interface RiskFactor {
+  score: number;
+  details: Record<string, string | number>;
+}
+
 export interface SetUserRoleData {
   uid: string;
   role: "user" | "business_person" | "investor" | "banker" | "business_advisor";
@@ -19,7 +24,7 @@ export interface UpdatePortfolioMetricsData {
 
 export interface WebhookData {
   type: "payment_success" | "investment_milestone";
-  data: any;
+  data: Record<string, unknown>;
 }
 
 export interface SendNotificationData {
@@ -50,8 +55,8 @@ export interface BusinessIdea {
   revenueModel: string;
   teamInfo: string;
   status: string;
-  createdAt: any;
-  updatedAt: any;
+  createdAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
 }
 
 export interface UserProfile {
@@ -65,8 +70,8 @@ export interface UserProfile {
     skills?: string[];
     location?: string;
   };
-  createdAt: any;
-  updatedAt: any;
+  createdAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
 }
 
 export interface Investment {
@@ -77,7 +82,7 @@ export interface Investment {
   businessIdeaId: string;
   investorId: string;
   status: string;
-  createdAt: any;
+  createdAt: FirebaseFirestore.Timestamp;
 }
 
 export interface Portfolio {
@@ -96,7 +101,7 @@ export interface Portfolio {
     categories: number;
     recommendation: string;
   };
-  updatedAt: any;
+  updatedAt: FirebaseFirestore.Timestamp;
 }
 
 export interface RiskAssessment {
@@ -106,16 +111,16 @@ export interface RiskAssessment {
   assessorId: string;
   riskScore: number;
   riskLevel: string;
-  factors: Record<string, any>;
+  factors: Record<string, RiskFactor>;
   recommendations: string[];
-  assessmentDate: any;
-  createdAt: any;
-  updatedAt: any;
+  assessmentDate: FirebaseFirestore.Timestamp;
+  createdAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
 }
 
 export interface LogEntry {
   userId: string;
   action: string;
-  data: Record<string, any>;
-  timestamp: any;
+  data: Record<string, unknown>;
+  timestamp: FirebaseFirestore.Timestamp;
 }
