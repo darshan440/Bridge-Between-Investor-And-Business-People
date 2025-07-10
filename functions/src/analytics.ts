@@ -447,7 +447,7 @@ function calculatePortfolioMetrics(investments: Investment[]): {
       : 0;
 
   // Performance by category
-  const performanceByCategory: Record<string, any> = {};
+  const performanceByCategory: Record<string, number> = {};
   const categoryCount: Record<string, number> = {};
 
   investments.forEach((inv) => {
@@ -475,12 +475,18 @@ function calculatePortfolioMetrics(investments: Investment[]): {
     roi,
     performance: {
       byCategory: performanceByCategory,
-      bestPerforming: Object.keys(performanceByCategory).reduce((a, b) =>
-        performanceByCategory[a] > performanceByCategory[b] ? a : b,
-      ),
-      worstPerforming: Object.keys(performanceByCategory).reduce((a, b) =>
-        performanceByCategory[a] < performanceByCategory[b] ? a : b,
-      ),
+      bestPerforming:
+        Object.keys(performanceByCategory).length > 0
+          ? Object.keys(performanceByCategory).reduce((a, b) =>
+              performanceByCategory[a] > performanceByCategory[b] ? a : b,
+            )
+          : "None",
+      worstPerforming:
+        Object.keys(performanceByCategory).length > 0
+          ? Object.keys(performanceByCategory).reduce((a, b) =>
+              performanceByCategory[a] < performanceByCategory[b] ? a : b,
+            )
+          : "None",
     },
     diversification: {
       score: diversificationScore,
