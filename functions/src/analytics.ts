@@ -124,7 +124,11 @@ export const updatePortfolioMetrics = onCall<UpdatePortfolioMetricsData>(
         throw new Error("Portfolio not found.");
       }
 
-      const portfolio = portfolioDoc.data()!;
+      const portfolioData = portfolioDoc.data();
+      if (!portfolioData) {
+        throw new Error("Portfolio data not found.");
+      }
+      const portfolio = portfolioData as Portfolio;
       const investments = portfolio.investments || [];
 
       // Calculate updated metrics
