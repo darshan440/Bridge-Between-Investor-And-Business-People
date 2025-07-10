@@ -124,3 +124,25 @@ export interface LogEntry {
   data: Record<string, unknown>;
   timestamp: FirebaseFirestore.Timestamp;
 }
+
+export interface PlatformAnalytics {
+  users: {
+    total: number;
+    byRole: Record<string, number>;
+  };
+  businessIdeas: {
+    total: number;
+    byCategory: Record<string, number>;
+    byStatus: Record<string, number>;
+  };
+  investments: {
+    totalProposals: number;
+    totalFunded: number;
+    proposalsByStatus: Record<string, number>;
+    averageAmount: number;
+  };
+  activity: {
+    recentActions: Record<string, number>;
+    totalLogs: number;
+  };
+}
