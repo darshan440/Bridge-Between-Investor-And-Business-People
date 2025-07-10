@@ -486,14 +486,14 @@ function calculatePortfolioMetrics(investments: Investment[]): {
       bestPerforming:
         Object.keys(performanceByCategory).length > 0
           ? Object.keys(performanceByCategory).reduce((a, b) =>
-              performanceByCategory[a] > performanceByCategory[b] ? a : b,
-            )
+            performanceByCategory[a] > performanceByCategory[b] ? a : b,
+          )
           : "None",
       worstPerforming:
         Object.keys(performanceByCategory).length > 0
           ? Object.keys(performanceByCategory).reduce((a, b) =>
-              performanceByCategory[a] < performanceByCategory[b] ? a : b,
-            )
+            performanceByCategory[a] < performanceByCategory[b] ? a : b,
+          )
           : "None",
     },
     diversification: {
