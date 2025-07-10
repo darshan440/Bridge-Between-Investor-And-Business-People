@@ -429,8 +429,16 @@ function generateRecommendations(
 function calculatePortfolioMetrics(investments: Investment[]): {
   totalValue: number;
   roi: number;
-  performance: any;
-  diversification: any;
+  performance: {
+    byCategory: Record<string, number>;
+    bestPerforming: string;
+    worstPerforming: string;
+  };
+  diversification: {
+    score: number;
+    categories: number;
+    recommendation: string;
+  };
 } {
   const totalInvested = investments.reduce(
     (sum, inv) => sum + (inv.amount || 0),
