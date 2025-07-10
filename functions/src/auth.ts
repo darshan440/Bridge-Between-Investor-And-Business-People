@@ -1,5 +1,7 @@
 import * as admin from "firebase-admin";
+import { onCall } from "firebase-functions/https";
 import * as functions from "firebase-functions/v1";
+import { PromoteToAdminData } from "./types";
 
 // Removed invalid import of CallableContext
 
@@ -254,7 +256,7 @@ export const verifyUserEmail = onCall(async (request) => {
     const link = await admin
       .auth()
       .generateEmailVerificationLink(
-        context.auth?.token?.email || "",
+        request.auth?.token?.email || "",
         actionCodeSettings,
       );
 

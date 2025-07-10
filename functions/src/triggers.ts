@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import { QueryDocumentSnapshot } from "firebase-admin/firestore";
+import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/firestore";
 import * as functions from "firebase-functions/v1";
 
 // Trigger when a new business idea is created

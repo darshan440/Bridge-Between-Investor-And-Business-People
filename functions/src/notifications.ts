@@ -1,5 +1,7 @@
 import * as admin from "firebase-admin";
+import { onCall } from "firebase-functions/https";
 import * as functions from "firebase-functions/v1";
+import { SendBulkNotificationsData } from "./types";
 
 // Send individual notification
 export const sendNotification = functions.https.onCall(
@@ -11,7 +13,7 @@ export const sendNotification = functions.https.onCall(
       );
     }
 
-    const { userId, title, body, type, data: notificationData } = request.data;
+    const { userId, title, body, type, data: notificationData } = data;
 
     try {
       // Create notification document
@@ -73,7 +75,7 @@ export const sendNotification = functions.https.onCall(
         .firestore()
         .collection("logs")
         .add({
-          userId: request.auth.uid,
+          userId: context.auth.uid,
           action: "NOTIFICATION_SENT",
           data: {
             targetUserId: userId,

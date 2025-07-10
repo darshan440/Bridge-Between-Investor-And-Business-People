@@ -21,6 +21,7 @@ import {
   cleanupOldNotifications,
 } from "./notifications";
 import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
+import { onCall } from "firebase-functions/https";
 
 // Authentication functions
 export { setUserRole };
@@ -65,7 +66,7 @@ export const webhookHandler = functions.https.onRequest(async (req, res) => {
 
   try {
     // Process webhook data
-    console.log("Webhook received:", data);
+    console.log("Webhook received:", body);
 
     // Handle different webhook types
     switch (body.type) {
@@ -79,10 +80,10 @@ export const webhookHandler = functions.https.onRequest(async (req, res) => {
       console.log("Unknown webhook type:", body.type);
     }
 
-    return { success: true };
+    res.status(200).send({ success: true });
   } catch (error) {
     console.error("Webhook error:", error);
-    throw error;
+    res.status(500).send({ success: false, error: error instanceof Error ? error.message : String(error) });
   }
 });
 
