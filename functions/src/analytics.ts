@@ -7,6 +7,8 @@ import {
   BusinessIdea,
   UserProfile,
   Investment,
+  RiskFactor,
+  PlatformAnalytics,
 } from "./types";
 
 // Generate risk assessment for a business idea
