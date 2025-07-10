@@ -237,12 +237,9 @@ function calculateRiskScore(
 }
 
 // Helper functions for risk assessment
-function assessMarketRisk(businessIdea: BusinessIdea): {
-  score: number;
-  details: any;
-} {
+function assessMarketRisk(businessIdea: BusinessIdea): RiskFactor {
   let score = 50; // Base score
-  const details: any = {};
+  const details: Record<string, string | number> = {};
 
   // Adjust based on category
   const highRiskCategories = ["Cryptocurrency", "Gaming", "Entertainment"];
