@@ -35,7 +35,11 @@ export const sendNotification = onCall<SendNotificationData>(
         .get();
 
       if (userDoc.exists) {
-        const userData = userDoc.data()!;
+        const userData = userDoc.data();
+        if (!userData) {
+          console.log("User data not found for notification");
+          return { success: false, error: "User data not found" };
+        }
         const fcmToken = userData.fcmToken;
 
         if (fcmToken) {
@@ -101,7 +105,7 @@ export const sendBulkNotifications = onCall<SendBulkNotificationsData>(
 
     try {
       const batch = admin.firestore().batch();
-      const notifications: any[] = [];
+      const notifications: Array<Record<string, unknown>> = [];
 
       // Create notification documents
       userIds.forEach((userId) => {
@@ -362,25 +366,25 @@ export const sendTopicNotification = onCall(async (request) => {
 // Helper function to generate notification URLs
 function getNotificationUrl(
   type: string,
-  _data: Record<string, any> = {},
+  _data: Record<string, unknown> = {},
 ): string {
   const baseUrl = "https://localhost:8080";
 
   switch (type) {
-  case "NEW_BUSINESS_PROPOSAL":
-    return `${baseUrl}/view-proposals`;
-  case "NEW_INVESTMENT_PROPOSAL":
-    return `${baseUrl}/dashboard`;
-  case "NEW_QUERY":
-    return `${baseUrl}/view-queries`;
-  case "NEW_RESPONSE":
-    return `${baseUrl}/query-panel`;
-  case "NEW_ADVISOR_TIP":
-    return `${baseUrl}/advisor-suggestions`;
-  case "PROPOSAL_STATUS_UPDATE":
-    return `${baseUrl}/portfolio`;
-  default:
-    return `${baseUrl}/dashboard`;
+    case "NEW_BUSINESS_PROPOSAL":
+      return `${baseUrl}/view-proposals`;
+    case "NEW_INVESTMENT_PROPOSAL":
+      return `${baseUrl}/dashboard`;
+    case "NEW_QUERY":
+      return `${baseUrl}/view-queries`;
+    case "NEW_RESPONSE":
+      return `${baseUrl}/query-panel`;
+    case "NEW_ADVISOR_TIP":
+      return `${baseUrl}/advisor-suggestions`;
+    case "PROPOSAL_STATUS_UPDATE":
+      return `${baseUrl}/portfolio`;
+    default:
+      return `${baseUrl}/dashboard`;
   }
 }
 
