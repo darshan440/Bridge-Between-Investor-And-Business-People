@@ -21,7 +21,7 @@ export const onBusinessIdeaCreated = onDocumentCreated(
         .where("role", "==", "investor")
         .get();
 
-      const notifications: any[] = [];
+      const notifications: Array<Record<string, unknown>> = [];
 
       investorsQuery.docs.forEach((investorDoc) => {
         notifications.push({
@@ -132,7 +132,15 @@ export const onInvestmentProposalCreated = onDocumentCreated(
         return;
       }
 
-      const businessIdea = businessIdeaDoc.data()!;
+      const businessIdeaData = businessIdeaDoc.data();
+      if (!businessIdeaData) {
+        console.error(
+          "Business idea data not found:",
+          proposalData.businessIdeaId,
+        );
+        return;
+      }
+      const businessIdea = businessIdeaData;
 
       // Send notification to business idea owner
       await admin
