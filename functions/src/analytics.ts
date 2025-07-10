@@ -587,7 +587,7 @@ async function generatePlatformAnalytics(): Promise<PlatformAnalytics> {
       totalLogs: logsQuery.size,
     };
 
-    return analytics;
+    return analytics as PlatformAnalytics;
   } catch (error) {
     console.error("Error generating platform analytics:", error);
     throw error;

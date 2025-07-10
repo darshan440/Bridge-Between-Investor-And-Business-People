@@ -546,7 +546,7 @@ export const onInvestmentProposalUpdated = onDocumentUpdated(
       if (!businessIdeaData) {
         console.error(
           "Business idea data not found:",
-          oldProposal.businessIdeaId,
+          newProposal.businessIdeaId,
         );
         return;
       }
