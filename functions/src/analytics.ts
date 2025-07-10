@@ -186,10 +186,10 @@ function calculateRiskScore(
 ): {
   overallScore: number;
   riskLevel: string;
-  factors: Record<string, any>;
+  factors: Record<string, RiskFactor>;
   recommendations: string[];
 } {
-  const factors: Record<string, any> = {};
+  const factors: Record<string, RiskFactor> = {};
   let totalScore = 0;
 
   // Market risk (20%)
@@ -263,12 +263,9 @@ function assessMarketRisk(businessIdea: BusinessIdea): {
   return { score: Math.max(0, Math.min(100, score)), details };
 }
 
-function assessFinancialRisk(businessIdea: BusinessIdea): {
-  score: number;
-  details: any;
-} {
+function assessFinancialRisk(businessIdea: BusinessIdea): RiskFactor {
   let score = 50;
-  const details: any = {};
+  const details: Record<string, string | number> = {};
 
   // Parse budget amount
   const budgetStr = businessIdea.budget?.replace(/[^\d]/g, "") || "0";
@@ -305,9 +302,9 @@ function assessFinancialRisk(businessIdea: BusinessIdea): {
 function assessTeamRisk(
   businessIdea: BusinessIdea,
   userProfile: UserProfile,
-): { score: number; details: any } {
+): RiskFactor {
   let score = 50;
-  const details: any = {};
+  const details: Record<string, string | number> = {};
 
   // Team size
   const teamInfo = businessIdea.teamInfo || "";
@@ -335,12 +332,9 @@ function assessTeamRisk(
   return { score: Math.max(0, Math.min(100, score)), details };
 }
 
-function assessTechnologyRisk(businessIdea: BusinessIdea): {
-  score: number;
-  details: any;
-} {
+function assessTechnologyRisk(businessIdea: BusinessIdea): RiskFactor {
   let score = 50;
-  const details: any = {};
+  const details: Record<string, string | number> = {};
 
   const techCategories = ["Technology", "AI", "Blockchain", "IoT"];
   const description = businessIdea.description?.toLowerCase() || "";
@@ -362,12 +356,9 @@ function assessTechnologyRisk(businessIdea: BusinessIdea): {
   return { score: Math.max(0, Math.min(100, score)), details };
 }
 
-function assessCompetitionRisk(businessIdea: BusinessIdea): {
-  score: number;
-  details: any;
-} {
+function assessCompetitionRisk(businessIdea: BusinessIdea): RiskFactor {
   let score = 50;
-  const details: any = {};
+  const details: Record<string, string | number> = {};
 
   const description = businessIdea.description?.toLowerCase() || "";
 
@@ -395,7 +386,7 @@ function getRiskLevel(score: number): string {
 }
 
 function generateRecommendations(
-  factors: Record<string, any>,
+  factors: Record<string, RiskFactor>,
   overallScore: number,
 ): string[] {
   const recommendations: string[] = [];
@@ -499,8 +490,8 @@ function calculatePortfolioMetrics(investments: Investment[]): {
 }
 
 // Generate comprehensive platform analytics
-async function generatePlatformAnalytics(): Promise<any> {
-  const analytics: any = {};
+async function generatePlatformAnalytics(): Promise<PlatformAnalytics> {
+  const analytics: Partial<PlatformAnalytics> = {};
 
   try {
     // User statistics
