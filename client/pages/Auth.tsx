@@ -146,6 +146,25 @@ export default function Auth() {
                 ? "Access your dashboard and investment portfolio"
                 : "Join our community of investors and entrepreneurs"}
             </CardDescription>
+
+            {/* Mode Switch Helper */}
+            <div className="pt-2">
+              <p className="text-sm text-muted-foreground">
+                {isLogin
+                  ? "Don't have an account? "
+                  : "Already have an account? "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setError("");
+                  }}
+                  className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                >
+                  {isLogin ? "Sign Up" : "Login"}
+                </button>
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             {!isFirebaseEnabled && (
