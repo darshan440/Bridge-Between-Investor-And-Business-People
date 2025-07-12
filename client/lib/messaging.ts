@@ -33,13 +33,27 @@ export type NotificationType =
   | "PROPOSAL_STATUS_UPDATE"
   | "SYSTEM_NOTIFICATION";
 
-// Request notification permission and get FCM token
+// Request notification permission and get FCM token (must be called in response to user gesture)
 export const requestNotificationPermission = async (): Promise<
   string | null
 > => {
   try {
     if (!messaging) {
       console.log("Messaging not supported in this environment");
+      return null;
+    }
+
+    // Check current permission status first
+    if (Notification.permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "your-vapid-key",
+      });
+      return token;
+    }
+
+    // Only request permission if not already denied
+    if (Notification.permission === "denied") {
+      console.log("Notification permission previously denied");
       return null;
     }
 
@@ -296,18 +310,22 @@ export const sendEventNotification = async (
   await createNotification(targetUserId, title, body, event, eventData);
 };
 
-// Initialize FCM in the app
+// Initialize FCM in the app (without requesting permission automatically)
 export const initializeMessaging = async (userId: string): Promise<void> => {
   try {
-    // Request permission and get token
-    const token = await requestNotificationPermission();
-
-    if (token && userId) {
-      // Store token in user profile (this would be done via Cloud Function)
-      await logUserAction(userId, "NOTIFICATION_SENT", {
-        action: "FCM_TOKEN_GENERATED",
-        token: token.substring(0, 20) + "...", // Log partial token for privacy
+    // Check if permission is already granted and get token
+    if (Notification.permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "your-vapid-key",
       });
+
+      if (token && userId) {
+        // Store token in user profile (this would be done via Cloud Function)
+        await logUserAction(userId, "NOTIFICATION_TOKEN_UPDATED", {
+          action: "FCM_TOKEN_GENERATED",
+          token: token.substring(0, 20) + "...", // Log partial token for privacy
+        });
+      }
     }
 
     // Set up foreground message listener

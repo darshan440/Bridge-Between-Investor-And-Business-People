@@ -100,27 +100,52 @@ isSupported().then((supported) => {
 export { messaging };
 
 // Connect to emulators in development
-if (
-  import.meta.env.DEV &&
-  isFirebaseEnabled &&
-  auth &&
-  db &&
-  storage &&
-  functions
-) {
-  // Connect to emulators if they're not already connected
-  try {
-    connectAuthEmulator(auth, "http://localhost:9099", {
-      disableWarnings: true,
-    });
-    connectFirestoreEmulator(db, "localhost", 8080);
-    connectStorageEmulator(storage, "localhost", 9199);
-    connectFunctionsEmulator(functions, "localhost", 5001);
-    console.log("🔥 Connected to Firebase emulators");
-  } catch (error) {
-    // Emulators already connected or not available
-    console.log("Firebase emulators connection attempt:", error);
-  }
+if (import.meta.env.DEV && isFirebaseEnabled) {
+  // Track if emulators are already connected to prevent double connection
+  let emulatorsConnected = false;
+
+  const connectToEmulators = () => {
+    if (emulatorsConnected || !auth || !db || !storage || !functions) return;
+
+    try {
+      // Check if emulators are available by checking if auth emulator is already connected
+      if (!auth._config?.emulator) {
+        connectAuthEmulator(auth, "http://localhost:9099", {
+          disableWarnings: true,
+        });
+      }
+
+      // Check if Firestore emulator is not already connected
+      if (!db._delegate?._databaseId?.projectId?.includes("localhost")) {
+        connectFirestoreEmulator(db, "localhost", 8080);
+      }
+
+      // Check if Storage emulator is not already connected
+      if (!storage._config?.emulator) {
+        connectStorageEmulator(storage, "localhost", 9199);
+      }
+
+      // Check if Functions emulator is not already connected
+      if (!functions._config?.emulator) {
+        connectFunctionsEmulator(functions, "localhost", 5001);
+      }
+
+      emulatorsConnected = true;
+      console.log("🔥 Connected to Firebase emulators");
+    } catch (error) {
+      // Emulators already connected or not available
+      console.log(
+        "Firebase emulators connection attempt:",
+        error?.message || error,
+      );
+    }
+  };
+
+  // Try to connect immediately
+  connectToEmulators();
+
+  // Also try after a short delay in case services aren't ready
+  setTimeout(connectToEmulators, 100);
 }
 
 // Firestore collection names (centralized for consistency)
