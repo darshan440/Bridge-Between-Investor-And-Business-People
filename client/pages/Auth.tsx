@@ -63,7 +63,30 @@ export default function Auth() {
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
-      setError(error.message || "Authentication failed");
+
+      // Handle specific Firebase auth errors
+      if (error.code === "auth/email-already-in-use") {
+        setIsLogin(true);
+        setError(
+          "Email already registered. Switched to login mode. Please try logging in.",
+        );
+      } else if (
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/wrong-password"
+      ) {
+        setError("Invalid email or password. Please check your credentials.");
+      } else if (error.code === "auth/user-not-found") {
+        setIsLogin(false);
+        setError("Account not found. Switched to registration mode.");
+      } else if (error.code === "auth/weak-password") {
+        setError("Password should be at least 6 characters long.");
+      } else if (error.code === "auth/invalid-email") {
+        setError("Please enter a valid email address.");
+      } else if (error.code === "auth/too-many-requests") {
+        setError("Too many failed attempts. Please try again later.");
+      } else {
+        setError(error.message || "Authentication failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
