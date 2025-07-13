@@ -14,6 +14,10 @@ export interface PromoteToAdminData {
   uid: string;
 }
 
+export interface ChangeUserRoleData {
+  newRole: "user" | "investor" | "business_person" | "business_advisor";
+}
+
 export interface GenerateRiskAssessmentData {
   businessIdeaId: string;
 }
