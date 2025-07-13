@@ -22,6 +22,7 @@ import {
   Zap,
 } from "lucide-react";
 import { RoleChangeModal } from "./RoleChangeModal";
+import { WelcomeBanner } from "./WelcomeBanner";
 
 interface UserDashboardProps {
   onRoleChanged: (newRole: string) => void;
@@ -124,6 +125,9 @@ export function UserDashboard({ onRoleChanged }: UserDashboardProps) {
 
   return (
     <div className="space-y-8">
+      {/* Welcome Banner */}
+      <WelcomeBanner onUpgradeRole={() => setShowRoleModal(true)} />
+
       {/* Welcome Section */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">
