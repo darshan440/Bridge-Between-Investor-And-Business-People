@@ -8,7 +8,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getCurrentUserProfile, updateUserProfile } from "@/lib/auth";
+import { getCurrentUserProfile } from "@/lib/auth";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
 import { UserRole } from "@/lib/firebase";
 import { BusinessPersonForm } from "@/components/forms/BusinessPersonForm";
 import { InvestorForm } from "@/components/forms/InvestorForm";
@@ -68,24 +70,24 @@ export default function CompleteProfile() {
   const handleSubmit = async (formData: CompleteProfileData) => {
     setLoading(true);
     try {
-      // Update user profile with form data and mark as complete
-      await updateUserProfile({
-        displayName: formData.fullName,
-        profile: {
-          ...formData,
-          isComplete: true,
-        },
-        isComplete: true,
-      });
+      // Call backend function to complete profile
+      const completeProfile = httpsCallable(functions, "completeUserProfile");
+      const result = await completeProfile({ profileData: formData });
 
-      toast({
-        title: "Profile completed successfully!",
-        description: "Your profile is now visible to other users.",
-        className: "bg-green-50 border-green-200",
-      });
+      const data = result.data as { success: boolean; message: string };
 
-      // Redirect to dashboard after successful completion
-      navigate("/dashboard");
+      if (data.success) {
+        toast({
+          title: "Profile completed successfully!",
+          description: "Your profile is now visible to other users.",
+          className: "bg-green-50 border-green-200",
+        });
+
+        // Redirect to dashboard after successful completion
+        navigate("/dashboard");
+      } else {
+        throw new Error(data.message || "Profile completion failed");
+      }
     } catch (error: any) {
       console.error("Profile completion error:", error);
       toast({
