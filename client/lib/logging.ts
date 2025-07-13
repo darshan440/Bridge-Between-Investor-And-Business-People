@@ -1,5 +1,5 @@
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db, COLLECTIONS } from "./firebase";
+import { COLLECTIONS, db } from "./firebase";
 
 export interface LogEntry {
   userId: string;
@@ -26,15 +26,15 @@ export type LogAction =
   | "QUERY_CREATED"
   | "QUERY_VIEWED"
   | "RESPONSE_CREATED"
+  | "ROLE_CHANGED_CLIENT"
   | "ADVISOR_SUGGESTION_CREATED"
   | "ADVISOR_SUGGESTION_VIEWED"
   | "LOAN_SCHEME_CREATED"
   | "LOAN_SCHEME_VIEWED"
   | "NOTIFICATION_SENT"
-  | "NOTIFICATION_TOKEN_UPDATED" 
+  | "NOTIFICATION_TOKEN_UPDATED"
   | "SEARCH_PERFORMED"
   | "ERROR_OCCURRED";
-
 
 // Log user action to Firestore
 export const logUserAction = async (
