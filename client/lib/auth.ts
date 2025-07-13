@@ -108,18 +108,15 @@ export const registerUser = async (
     };
 
     await setDoc(doc(db, COLLECTIONS.USERS, user.uid), userProfile);
- const ip = await getIP();
+    const ip = await getIP();
 
     // Log user registration
-    await logUserAction(user.uid, "USER_REGISTERED", { role, email },{ip});
+    await logUserAction(user.uid, "USER_REGISTERED", { role, email }, { ip });
 
     return userProfile;
   } catch (error: any) {
     console.error("Registration error:", error);
-   
-    
-    
-    
+
     throw new Error(error.message || "Registration failed");
   }
 };
@@ -172,7 +169,6 @@ export const signInUser = async (
 
     throw new Error(error.message || "Sign in failed");
   }
-  
 };
 
 // Sign out user
@@ -296,6 +292,75 @@ export const getUserRole = async (): Promise<UserRole | null> => {
 export const hasRole = async (requiredRole: UserRole): Promise<boolean> => {
   const userRole = await getUserRole();
   return userRole === requiredRole;
+};
+
+// Change user role
+export const changeUserRole = async (
+  newRole: UserRole,
+): Promise<{ success: boolean; message: string; newRole: string }> => {
+  if (!auth?.currentUser || !functions) {
+    throw new Error("User not authenticated or Firebase not available");
+  }
+
+  try {
+    const changeRole = httpsCallable(functions, "changeUserRole");
+    const result = await changeRole({ newRole });
+
+    const data = result.data as {
+      success: boolean;
+      message: string;
+      newRole: string;
+    };
+
+    if (data.success) {
+      // Force token refresh to get updated custom claims
+      await auth.currentUser.getIdToken(true);
+
+      // Log the role change
+      await logUserAction(auth.currentUser.uid, "ROLE_CHANGED_CLIENT", {
+        newRole: data.newRole,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error changing user role:", error);
+    throw error;
+  }
+};
+
+// Get available roles for current user
+export const getAvailableRoles = async (): Promise<{
+  currentRole: string;
+  currentRoleDescription: string;
+  availableRoles: Array<{
+    role: string;
+    description: string;
+    requiresApproval: boolean;
+  }>;
+}> => {
+  if (!auth?.currentUser || !functions) {
+    throw new Error("User not authenticated or Firebase not available");
+  }
+
+  try {
+    const getAvailable = httpsCallable(functions, "getAvailableRoles");
+    const result = await getAvailable();
+
+    return result.data as {
+      currentRole: string;
+      currentRoleDescription: string;
+      availableRoles: Array<{
+        role: string;
+        description: string;
+        requiresApproval: boolean;
+      }>;
+    };
+  } catch (error) {
+    console.error("Error getting available roles:", error);
+    throw error;
+  }
 };
 
 // Check if user has any of the specified roles
