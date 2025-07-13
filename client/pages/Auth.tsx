@@ -1,7 +1,5 @@
-import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -9,6 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -16,11 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Building, ArrowLeft, Loader2 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
 import { registerUser, signInUser } from "@/lib/auth";
 import { USER_ROLES, UserRole, isFirebaseEnabled } from "@/lib/firebase";
+import { ArrowLeft, Building, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -41,12 +41,12 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        // Sign in existing user
+        // Try signing in
         const userProfile = await signInUser(formData.email, formData.password);
         console.log("User signed in:", userProfile);
         navigate("/dashboard", { state: { role: userProfile.role } });
       } else {
-        // Register new user
+        // Sign up new user
         if (!formData.name || !formData.role) {
           setError("Please fill in all required fields");
           return;
@@ -62,6 +62,15 @@ export default function Auth() {
         navigate("/dashboard", { state: { role: userProfile.role } });
       }
     } catch (error: any) {
+      // If login failed because user doesn't exist
+      if (isLogin && error.message.includes("USER_NOT_FOUND")) {
+        setIsLogin(false); // Switch to signup mode
+        setError(
+          "User not found. Switched to sign-up.",
+        );
+        return;
+      }
+
       console.error("Authentication error:", error);
 
       // Handle specific Firebase auth errors

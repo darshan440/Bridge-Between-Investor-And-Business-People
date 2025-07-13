@@ -1,7 +1,6 @@
 import * as admin from "firebase-admin";
-import { onCall } from "firebase-functions/v2/https";
-import { onSchedule } from "firebase-functions/v2/scheduler";
-import { WebhookData } from "./types";
+
+import * as functions from "firebase-functions/v1";
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -22,6 +21,7 @@ import {
   cleanupOldNotifications,
 } from "./notifications";
 import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
+import { onCall } from "firebase-functions/https";
 
 // Authentication functions
 export { setUserRole };
@@ -42,35 +42,48 @@ export { sendNotification, sendBulkNotifications };
 // Analytics and automation functions
 export { generateRiskAssessment, updatePortfolioMetrics };
 
-// Scheduled functions
-export const dailyCleanup = onSchedule("0 2 * * *", async (_event) => {
-  console.log("Running daily cleanup");
-  await cleanupOldNotifications();
-});
+export const dailyCleanup = functions.pubsub
+  .schedule("0 2 * * *") // Run daily at 2 AM
+  .timeZone("Asia/Kolkata")
+  .onRun(async (context) => {
+    console.log("Running daily cleanup");
+    await cleanupOldNotifications();
+    return null;
+  });
+  
 
 // HTTP functions for external integrations
-export const webhookHandler = onCall<WebhookData>(async (request) => {
-  const data = request.data;
+export const webhookHandler = functions.https.onRequest(async (req, res) => {
+  // Handle webhooks from external services
+  const { body } = req;
+
+  // Verify webhook signature (implement based on service)
+  // const isValid = verifyWebhookSignature(body, headers);
+  // if (!isValid) {
+  //   res.status(401).send('Unauthorized');
+  //   return;
+  // }
+
   try {
     // Process webhook data
-    console.log("Webhook received:", data);
+    console.log("Webhook received:", body);
 
     // Handle different webhook types
-    switch (data.type) {
+    switch (body.type) {
     case "payment_success":
-      await handlePaymentSuccess(data.data);
+      await handlePaymentSuccess(body.data);
       break;
     case "investment_milestone":
-      await handleInvestmentMilestone(data.data);
+      await handleInvestmentMilestone(body.data);
       break;
     default:
-      console.log("Unknown webhook type:", data.type);
+      console.log("Unknown webhook type:", body.type);
     }
 
-    return { success: true };
+    res.status(200).send({ success: true });
   } catch (error) {
     console.error("Webhook error:", error);
-    throw error;
+    res.status(500).send({ success: false, error: error instanceof Error ? error.message : String(error) });
   }
 });
 

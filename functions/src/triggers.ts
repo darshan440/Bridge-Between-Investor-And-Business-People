@@ -1,113 +1,111 @@
 import * as admin from "firebase-admin";
-import {
-  onDocumentCreated,
-  onDocumentUpdated,
-} from "firebase-functions/v2/firestore";
+import { QueryDocumentSnapshot } from "firebase-admin/firestore";
+import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/firestore";
+import * as functions from "firebase-functions/v1";
 
 // Trigger when a new business idea is created
-export const onBusinessIdeaCreated = onDocumentCreated(
-  "businessIdeas/{ideaId}",
-  async (event) => {
-    const snap = event.data;
-    if (!snap) return;
-    const ideaData = snap.data();
-    const ideaId = event.params.ideaId;
+export const onBusinessIdeaCreated = functions.firestore
+  .document("businessIdeas/{ideaId}")
 
-    try {
-      // Send notifications to all investors
-      const investorsQuery = await admin
-        .firestore()
-        .collection("users")
-        .where("role", "==", "investor")
-        .get();
+  .onCreate(
+    async (snap: QueryDocumentSnapshot, context: functions.EventContext) => {
+      const ideaData = snap.data();
+      const ideaId = context.params.ideaId;
+      try {
+        // Send notifications to all investors
+        const investorsQuery = await admin
+          .firestore()
+          .collection("users")
+          .where("role", "==", "investor")
+          .get();
 
-      const notifications: Array<Record<string, unknown>> = [];
+        const notifications: any[] = [];
 
-      investorsQuery.docs.forEach((investorDoc) => {
-        notifications.push({
-          userId: investorDoc.id,
-          title: "New Business Proposal",
-          body: `Check out the new business idea: "${ideaData.title}"`,
-          type: "NEW_BUSINESS_PROPOSAL",
-          data: {
-            ideaId: ideaId,
-            ideaTitle: ideaData.title,
-            category: ideaData.category,
-            budget: ideaData.budget,
+        investorsQuery.docs.forEach((investorDoc) => {
+          notifications.push({
+            userId: investorDoc.id,
+            title: "New Business Proposal",
+            body: `Check out the new business idea: "${ideaData.title}"`,
+            type: "NEW_BUSINESS_PROPOSAL",
+            data: {
+              ideaId: ideaId,
+              ideaTitle: ideaData.title,
+              category: ideaData.category,
+              budget: ideaData.budget,
+            },
+            read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+
+        // Batch write notifications
+        if (notifications.length > 0) {
+          const batch = admin.firestore().batch();
+          notifications.forEach((notification) => {
+            const notificationRef = admin
+              .firestore()
+              .collection("notifications")
+              .doc();
+            batch.set(notificationRef, notification);
+          });
+          await batch.commit();
+        }
+
+        // Send FCM push notifications (if you have user tokens stored)
+        const fcmPayload = {
+          notification: {
+            title: "New Business Proposal",
+            body: `"${ideaData.title}" is looking for investment`,
+            icon: "/icon-192x192.png",
           },
-          read: false,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      });
-
-      // Batch write notifications
-      if (notifications.length > 0) {
-        const batch = admin.firestore().batch();
-        notifications.forEach((notification) => {
-          const notificationRef = admin
-            .firestore()
-            .collection("notifications")
-            .doc();
-          batch.set(notificationRef, notification);
-        });
-        await batch.commit();
-      }
-
-      // Send FCM push notifications (if you have user tokens stored)
-      const fcmPayload = {
-        notification: {
-          title: "New Business Proposal",
-          body: `"${ideaData.title}" is looking for investment`,
-          icon: "/icon-192x192.png",
-        },
-        data: {
-          type: "NEW_BUSINESS_PROPOSAL",
-          ideaId: ideaId,
-          click_action: "/view-proposals",
-        },
-      };
-
-      // Get FCM tokens for investors (you would store these in user profiles)
-      const fcmTokensQuery = await admin
-        .firestore()
-        .collection("users")
-        .where("role", "==", "investor")
-        .where("fcmToken", "!=", null)
-        .get();
-
-      const fcmTokens = fcmTokensQuery.docs
-        .map((doc) => doc.data().fcmToken)
-        .filter((token) => token);
-
-      if (fcmTokens.length > 0) {
-        await admin.messaging().sendToDevice(fcmTokens, fcmPayload);
-      }
-
-      // Log the event
-      await admin
-        .firestore()
-        .collection("logs")
-        .add({
-          userId: ideaData.userId,
-          action: "BUSINESS_IDEA_PUBLISHED",
           data: {
+            type: "NEW_BUSINESS_PROPOSAL",
             ideaId: ideaId,
-            title: ideaData.title,
-            category: ideaData.category,
-            notificationsSent: notifications.length,
+            click_action: "/view-proposals",
           },
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        };
 
-      console.log(
-        `Business idea created: ${ideaId}, notifications sent: ${notifications.length}`,
-      );
-    } catch (error) {
-      console.error("Error in onBusinessIdeaCreated:", error);
-    }
-  },
-);
+        // Get FCM tokens for investors (you would store these in user profiles)
+        const fcmTokensQuery = await admin
+          .firestore()
+          .collection("users")
+          .where("role", "==", "investor")
+          .where("fcmToken", "!=", null)
+          .get();
+
+        const fcmTokens = fcmTokensQuery.docs
+          .map((doc) => doc.data().fcmToken)
+          .filter((token) => token);
+
+        if (fcmTokens.length > 0) {
+          await admin.messaging().sendToDevice(fcmTokens, fcmPayload);
+        }
+
+        // Log the event
+        await admin
+          .firestore()
+          .collection("logs")
+          .add({
+            userId: ideaData.userId,
+            action: "BUSINESS_IDEA_PUBLISHED",
+            data: {
+              ideaId: ideaId,
+              title: ideaData.title,
+              category: ideaData.category,
+              notificationsSent: notifications.length,
+            },
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+        console.log(
+          `Business idea created: ${ideaId}, notifications sent: ${notifications.length}`,
+        );
+      } catch (error) {
+        console.error("Error in onBusinessIdeaCreated:", error);
+      }
+    },
+  );
 
 // Trigger when a new investment proposal is created
 export const onInvestmentProposalCreated = onDocumentCreated(

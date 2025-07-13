@@ -1,15 +1,19 @@
 import * as admin from "firebase-admin";
-import { onCall } from "firebase-functions/v2/https";
-import { SendNotificationData, SendBulkNotificationsData } from "./types";
+import { onCall } from "firebase-functions/https";
+import * as functions from "firebase-functions/v1";
+import { SendBulkNotificationsData } from "./types";
 
 // Send individual notification
-export const sendNotification = onCall<SendNotificationData>(
-  async (request) => {
-    if (!request.auth) {
-      throw new Error("User must be authenticated to send notifications.");
+export const sendNotification = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    if (!context || !context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be authenticated to send notifications.",
+      );
     }
 
-    const { userId, title, body, type, data: notificationData } = request.data;
+    const { userId, title, body, type, data: notificationData } = data;
 
     try {
       // Create notification document
@@ -71,7 +75,7 @@ export const sendNotification = onCall<SendNotificationData>(
         .firestore()
         .collection("logs")
         .add({
-          userId: request.auth.uid,
+          userId: context.auth.uid,
           action: "NOTIFICATION_SENT",
           data: {
             targetUserId: userId,

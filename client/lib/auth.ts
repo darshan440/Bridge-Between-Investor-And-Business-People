@@ -154,8 +154,15 @@ export const signInUser = async (
     return userProfile;
   } catch (error: any) {
     console.error("Sign in error:", error);
+
+    if (error.code === "auth/user-not-found") {
+      // Signal to the component that this is a "user not found" case
+      throw new Error("USER_NOT_FOUND");
+    }
+
     throw new Error(error.message || "Sign in failed");
   }
+  
 };
 
 // Sign out user
