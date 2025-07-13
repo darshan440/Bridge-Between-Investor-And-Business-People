@@ -92,12 +92,16 @@ export function RoleChangeModal({
     }
 
     try {
+      console.log("Loading available roles for user:", user?.uid);
       const getAvailableRoles = httpsCallable(functions, "getAvailableRoles");
       const result = await getAvailableRoles();
+      console.log("Available roles result:", result.data);
       setRoleInfo(result.data as RoleInfo);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading available roles:", error);
-      setError("Failed to load available roles");
+      setError(
+        `Failed to load available roles: ${error.message || error.code || "Unknown error"}`,
+      );
     }
   };
 
