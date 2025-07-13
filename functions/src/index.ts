@@ -8,6 +8,11 @@ admin.initializeApp();
 // Import function modules
 import { setUserRole } from "./auth";
 import {
+  changeUserRole,
+  getAvailableRoles,
+  approveRoleChange,
+} from "./roleManagement";
+import {
   onBusinessIdeaCreated,
   onInvestmentProposalCreated,
   onQueryCreated,
@@ -25,6 +30,9 @@ import { onCall } from "firebase-functions/https";
 
 // Authentication functions
 export { setUserRole };
+
+// Role management functions
+export { changeUserRole, getAvailableRoles, approveRoleChange };
 
 // Firestore trigger functions
 export {
@@ -50,7 +58,6 @@ export const dailyCleanup = functions.pubsub
     await cleanupOldNotifications();
     return null;
   });
-  
 
 // HTTP functions for external integrations
 export const webhookHandler = functions.https.onRequest(async (req, res) => {
@@ -70,20 +77,25 @@ export const webhookHandler = functions.https.onRequest(async (req, res) => {
 
     // Handle different webhook types
     switch (body.type) {
-    case "payment_success":
-      await handlePaymentSuccess(body.data);
-      break;
-    case "investment_milestone":
-      await handleInvestmentMilestone(body.data);
-      break;
-    default:
-      console.log("Unknown webhook type:", body.type);
+      case "payment_success":
+        await handlePaymentSuccess(body.data);
+        break;
+      case "investment_milestone":
+        await handleInvestmentMilestone(body.data);
+        break;
+      default:
+        console.log("Unknown webhook type:", body.type);
     }
 
     res.status(200).send({ success: true });
   } catch (error) {
     console.error("Webhook error:", error);
-    res.status(500).send({ success: false, error: error instanceof Error ? error.message : String(error) });
+    res
+      .status(500)
+      .send({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
   }
 });
 
