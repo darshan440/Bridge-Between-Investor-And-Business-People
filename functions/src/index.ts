@@ -13,6 +13,10 @@ import {
   approveRoleChange,
 } from "./roleManagement";
 import {
+  completeUserProfile,
+  getProfileCompletionStatus,
+} from "./profileManagement";
+import {
   onBusinessIdeaCreated,
   onInvestmentProposalCreated,
   onQueryCreated,
@@ -33,6 +37,9 @@ export { setUserRole };
 
 // Role management functions
 export { changeUserRole, getAvailableRoles, approveRoleChange };
+
+// Profile management functions
+export { completeUserProfile, getProfileCompletionStatus };
 
 // Firestore trigger functions
 export {
@@ -90,12 +97,10 @@ export const webhookHandler = functions.https.onRequest(async (req, res) => {
     res.status(200).send({ success: true });
   } catch (error) {
     console.error("Webhook error:", error);
-    res
-      .status(500)
-      .send({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+    res.status(500).send({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 });
 
