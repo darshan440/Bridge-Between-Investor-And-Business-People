@@ -53,9 +53,7 @@ export const changeUserRole = onCall<ChangeUserRoleData>(async (request) => {
 
     // Validate role change using the matrix
     const allowedRoles =
-      roleConfig.roleMatrix[
-        currentRole as keyof typeof roleConfig.roleMatrix
-      ] || [];
+      (roleConfig.roleMatrix as Record<string, string[]>)[currentRole] || [];
 
     if (!allowedRoles.includes(newRole)) {
       throw new Error(
@@ -175,29 +173,22 @@ export const getAvailableRoles = onCall(async (request) => {
 
     // Get allowed role transitions
     const allowedRoles =
-      roleConfig.roleMatrix[
-        currentRole as keyof typeof roleConfig.roleMatrix
-      ] || [];
+      (roleConfig.roleMatrix as Record<string, string[]>)[currentRole] || [];
 
     // Add role descriptions for each allowed role
     const availableRoles = allowedRoles.map((role: string) => ({
       role,
       description:
-        roleConfig.roleDescriptions[
-          role as keyof typeof roleConfig.roleDescriptions
-        ],
+        (roleConfig.roleDescriptions as Record<string, string>)[role] || "",
       requiresApproval:
-        roleConfig.approvalRequired[
-          role as keyof typeof roleConfig.approvalRequired
-        ] || false,
+        (roleConfig.approvalRequired as Record<string, boolean>)[role] || false,
     }));
 
     return {
       currentRole,
       currentRoleDescription:
-        roleConfig.roleDescriptions[
-          currentRole as keyof typeof roleConfig.roleDescriptions
-        ],
+        (roleConfig.roleDescriptions as Record<string, string>)[currentRole] ||
+        "",
       availableRoles,
     };
   } catch (error) {
