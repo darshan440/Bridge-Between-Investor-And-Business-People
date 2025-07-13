@@ -1,0 +1,22 @@
+{
+  "roleMatrix": {
+    "user": ["investor", "business_person", "business_advisor"],
+    "investor": ["user", "business_person", "business_advisor"],
+    "business_person": ["user", "investor", "business_advisor"],
+    "business_advisor": ["user", "investor", "business_person"],
+    "banker": [],
+    "admin": []
+  },
+  "roleDescriptions": {
+    "user": "General user with browsing privileges",
+    "investor": "Can invest in business ideas and manage portfolio",
+    "business_person": "Can post business ideas and seek investments",
+    "business_advisor": "Can provide expert advice and guidance",
+    "banker": "Can create loan schemes and assess risks",
+    "admin": "Full system administration privileges"
+  },
+  "restrictedRoles": ["banker", "admin"],
+  "approvalRequired": {
+    "business_advisor": false
+  }
+}
