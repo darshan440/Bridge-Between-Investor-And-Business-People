@@ -16,7 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { registerUser, resetPassword, signInUser } from "@/lib/auth";
+import {
+  registerUser,
+  resetPassword,
+  signInUser,
+  changeUserRole,
+} from "@/lib/auth";
 import { USER_ROLES, UserRole, isFirebaseEnabled } from "@/lib/firebase";
 import { ArrowLeft, Building, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -41,10 +46,49 @@ export default function Auth() {
 
     try {
       if (isLogin) {
-        // Try signing in
+        // Sign in existing user
         const userProfile = await signInUser(formData.email, formData.password);
         console.log("User signed in:", userProfile);
-        navigate("/dashboard", { state: { role: userProfile.role } });
+
+        // Handle role selection during login
+        let finalRole = userProfile.role;
+
+        if (formData.role && formData.role !== userProfile.role) {
+          // Validate role change is allowed
+          const allowedRoles = [
+            "user",
+            "business_person",
+            "investor",
+            "business_advisor",
+          ];
+          const restrictedRoles = ["banker", "admin"];
+
+          if (restrictedRoles.includes(formData.role)) {
+            setError(
+              `❌ You cannot log in as ${formData.role}. That role is restricted to verified staff. Please contact admin.`,
+            );
+            setLoading(false);
+            return;
+          }
+
+          if (allowedRoles.includes(formData.role)) {
+            try {
+              // Change role using the role management function
+              const roleChangeResult = await changeUserRole(formData.role);
+              if (roleChangeResult.success) {
+                finalRole = roleChangeResult.newRole;
+                console.log("Role changed during login:", finalRole);
+              }
+            } catch (roleError: any) {
+              console.error("Role change error:", roleError);
+              setError(`Role change failed: ${roleError.message}`);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
+        navigate("/dashboard", { state: { role: finalRole } });
       } else {
         // Sign up new user
         if (!formData.name || !formData.role) {
