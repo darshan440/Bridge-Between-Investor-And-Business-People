@@ -1,9 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getStorage, connectStorageEmulator } from "firebase/storage";
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
-import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+import { connectAuthEmulator, getAuth } from "firebase/auth";
+import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
+import { getMessaging, isSupported } from "firebase/messaging";
+import { connectStorageEmulator, getStorage } from "firebase/storage";
 
 // Check if Firebase is properly configured
 const isFirebaseConfigured = () => {
@@ -38,6 +38,7 @@ const createFirebaseConfig = () => {
     console.warn(
       "Copy .env.example to .env and add your Firebase configuration.",
     );
+    
 
     // Return a minimal config for development
     return {
@@ -87,7 +88,7 @@ try {
   console.error("Error initializing Firebase services:", error);
 }
 
-export { auth, db, storage, functions };
+export { auth, db, functions, storage };
 
 // Initialize messaging only if supported (not in Node.js environment)
 let messaging: any = null;
@@ -99,9 +100,11 @@ isSupported().then((supported) => {
 
 export { messaging };
 
-// Connect to emulators in development
-if (import.meta.env.DEV && isFirebaseEnabled) {
-  // Track if emulators are already connected to prevent double connection
+
+  const useEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true";
+if (import.meta.env.DEV && isFirebaseEnabled && useEmulators) {
+  console.log("✅ Running in DEV mode:", import.meta.env.DEV);
+
   let emulatorsConnected = false;
 
   const connectToEmulators = () => {
@@ -132,6 +135,7 @@ if (import.meta.env.DEV && isFirebaseEnabled) {
 
       emulatorsConnected = true;
       console.log("🔥 Connected to Firebase emulators");
+      console.log("🔥 Firebase config being used:", createFirebaseConfig());
     } catch (error) {
       // Emulators already connected or not available
       console.log(

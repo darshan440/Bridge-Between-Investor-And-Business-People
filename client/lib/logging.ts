@@ -31,8 +31,10 @@ export type LogAction =
   | "LOAN_SCHEME_CREATED"
   | "LOAN_SCHEME_VIEWED"
   | "NOTIFICATION_SENT"
+  | "NOTIFICATION_TOKEN_UPDATED" 
   | "SEARCH_PERFORMED"
   | "ERROR_OCCURRED";
+
 
 // Log user action to Firestore
 export const logUserAction = async (

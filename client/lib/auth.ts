@@ -51,6 +51,11 @@ export interface UserProfile {
     preferredSectors?: string[];
   };
 }
+const getIP = async () => {
+  const res = await fetch("https://api64.ipify.org?format=json");
+  const data = await res.json();
+  return data.ip;
+};
 
 // Custom hook for authentication state
 export const useAuthState = () => {
@@ -103,13 +108,18 @@ export const registerUser = async (
     };
 
     await setDoc(doc(db, COLLECTIONS.USERS, user.uid), userProfile);
+ const ip = await getIP();
 
     // Log user registration
-    await logUserAction(user.uid, "USER_REGISTERED", { role, email });
+    await logUserAction(user.uid, "USER_REGISTERED", { role, email },{ip});
 
     return userProfile;
   } catch (error: any) {
     console.error("Registration error:", error);
+   
+    
+    
+    
     throw new Error(error.message || "Registration failed");
   }
 };

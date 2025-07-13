@@ -2,6 +2,8 @@ import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/https";
 import * as functions from "firebase-functions/v1";
 import { PromoteToAdminData } from "./types";
+import { FieldValue } from "firebase-admin/firestore";
+
 
 // Removed invalid import of CallableContext
 
@@ -51,7 +53,7 @@ export const setUserRole = functions.https.onCall(
         userId: uid,
         action: "ROLE_ASSIGNED",
         data: { role },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
       });
 
       return { success: true, role };
@@ -78,11 +80,11 @@ export const onUserCreated = functions.auth.user().onCreate(async (user) => {
         email: user.email,
         displayName: user.displayName || "",
         photoURL: user.photoURL || "",
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
         isActive: true,
         emailVerified: user.emailVerified,
-        lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastLoginAt: FieldValue.serverTimestamp(),
       });
     }
 
@@ -100,8 +102,8 @@ export const onUserCreated = functions.auth.user().onCreate(async (user) => {
           priority: "high",
         },
         read: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
     // Log user creation
@@ -115,7 +117,7 @@ export const onUserCreated = functions.auth.user().onCreate(async (user) => {
           email: user.email,
           provider: user.providerData?.[0]?.providerId ?? "email",
         },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
       });
 
     console.log(`New user created: ${user.uid}`);
@@ -200,9 +202,9 @@ export const onUserDeleted = functions.auth.user().onDelete(async (user) => {
         action: "USER_DELETED",
         data: {
           email: user.email,
-          deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+          deletedAt: FieldValue.serverTimestamp(),
         },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
       });
 
     console.log(`User data deleted for: ${user.uid}`);
@@ -231,7 +233,7 @@ export const promoteToAdmin = onCall<PromoteToAdminData>(async (request) => {
         userId: request.auth.uid,
         action: "USER_PROMOTED_TO_ADMIN",
         data: { promotedUserId: uid },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
       });
 
     return { success: true };
