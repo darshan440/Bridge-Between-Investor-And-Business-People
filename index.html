@@ -8,10 +8,10 @@
   <!-- remove in production this is very important -->
 
   <meta http-equiv="Content-Security-Policy" content="
-  default-src 'self' https:; frame-src 'self' https: http://localhost:9099/;
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com;
-    style-src 'self' 'unsafe-inline';
-    connect-src 'self' ws: wss: https: http://localhost:9099;
+    default-src 'self' http://localhost:5001 http://localhost:9099 https:;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https:;
+    connect-src 'self' ws: wss: http://localhost:5001 http://localhost:9099 https:;
+    style-src 'self' 'unsafe-inline' https:;
   ">
 
 

@@ -1,15 +1,15 @@
-import { getToken, onMessage, MessagePayload } from "firebase/messaging";
 import {
   addDoc,
   collection,
-  serverTimestamp,
-  query,
-  where,
-  getDocs,
-  updateDoc,
   doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
 } from "firebase/firestore";
-import { messaging, db, COLLECTIONS } from "./firebase";
+import { getToken, MessagePayload, onMessage } from "firebase/messaging";
+import { COLLECTIONS, db, messaging } from "./firebase";
 import { logUserAction } from "./logging";
 
 export interface NotificationData {
@@ -78,7 +78,7 @@ export const requestNotificationPermission = async (): Promise<
 
 // Listen for foreground messages
 export const onForegroundMessage = (
-  callback: (payload: MessagePayload) => void,
+callback: (payload: MessagePayload) => void, p0: (payload: any) => void,
 ) => {
   if (!messaging) return () => {};
 
@@ -313,28 +313,39 @@ export const sendEventNotification = async (
 // Initialize FCM in the app (without requesting permission automatically)
 export const initializeMessaging = async (userId: string): Promise<void> => {
   try {
-    // Check if permission is already granted and get token
-    if (Notification.permission === "granted") {
-      const token = await getToken(messaging, {
-        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "your-vapid-key",
-      });
+    // Only try to get FCM token in production
+    if (location.hostname !== "localhost") {
+      const permission = Notification.permission;
 
-      if (token && userId) {
-        // Store token in user profile (this would be done via Cloud Function)
-        await logUserAction(userId, "NOTIFICATION_TOKEN_UPDATED", {
-          action: "FCM_TOKEN_GENERATED",
-          token: token.substring(0, 20) + "...", // Log partial token for privacy
-        });
+      if (permission === "default") {
+        const result = await Notification.requestPermission();
+        if (result !== "granted") {
+          console.warn("Notification permission denied.");
+          return;
+        }
       }
+
+      if (Notification.permission === "granted") {
+        const token = await getToken(messaging, {
+          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || "your-vapid-key",
+        });
+
+        if (token && userId) {
+          await logUserAction(userId, "NOTIFICATION_TOKEN_UPDATED", {
+            action: "FCM_TOKEN_GENERATED",
+            token: token.substring(0, 20) + "...",
+          });
+        }
+      }
+    } else {
+      console.log("🔧 Skipping FCM token generation (localhost)");
     }
 
-    // Set up foreground message listener
-    onForegroundMessage((payload) => {
+    // Always listen for foreground messages
+    onForegroundMessage(messaging, (payload) => {
       console.log("Received foreground message:", payload);
 
-      // You can dispatch this to your state management or show a toast notification
       if (payload.notification) {
-        // Example: Show a toast notification
         const event = new CustomEvent("notification", {
           detail: {
             title: payload.notification.title,

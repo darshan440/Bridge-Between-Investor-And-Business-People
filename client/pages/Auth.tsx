@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { registerUser, signInUser } from "@/lib/auth";
+import { registerUser, resetPassword, signInUser } from "@/lib/auth";
 import { USER_ROLES, UserRole, isFirebaseEnabled } from "@/lib/firebase";
 import { ArrowLeft, Building, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -63,38 +63,44 @@ export default function Auth() {
       }
     } catch (error: any) {
       // If login failed because user doesn't exist
-      if (isLogin && error.message.includes("USER_NOT_FOUND")) {
-        setIsLogin(false); // Switch to signup mode
-        setError(
-          "User not found. Switched to sign-up.",
-        );
+      if (error.message.includes("USER_NOT_FOUND")) {
+        setTimeout(() => {
+          setIsLogin(false); // switch to signup form
+          setError("User not found. Please sign up.");
+        }, 100);
         return;
       }
-
-      console.error("Authentication error:", error);
-
-      // Handle specific Firebase auth errors
-      if (error.code === "auth/email-already-in-use") {
-        setIsLogin(true);
-        setError(
-          "Email already registered. Switched to login mode. Please try logging in.",
-        );
-      } else if (
-        error.code === "auth/invalid-credential" ||
-        error.code === "auth/wrong-password"
-      ) {
-        setError("Invalid email or password. Please check your credentials.");
-      } else if (error.code === "auth/user-not-found") {
-        setIsLogin(false);
-        setError("Account not found. Switched to registration mode.");
-      } else if (error.code === "auth/weak-password") {
-        setError("Password should be at least 6 characters long.");
-      } else if (error.code === "auth/invalid-email") {
-        setError("Please enter a valid email address.");
-      } else if (error.code === "auth/too-many-requests") {
-        setError("Too many failed attempts. Please try again later.");
+      if (error.code === 'auth/wrong-password') {
+        setError("Wrong password. Please try again.");
+      } else if (error.code === "auth/email-already-in-use") {
+        setError("Email already registered. Redirecting to login...");
+        setTimeout(() => setIsLogin(true), 1500);
       } else {
-        setError(error.message || "Authentication failed. Please try again.");
+        console.error("Authentication error:", error);
+
+        // Handle specific Firebase auth errors
+        if (error.code === "auth/email-already-in-use") {
+          setIsLogin(true);
+          setError(
+            "Email already registered. Switched to login mode. Please try logging in.",
+          );
+        } else if (
+          error.code === "auth/invalid-credential" ||
+          error.code === "auth/wrong-password"
+        ) {
+          setError("Invalid email or password. Please check your credentials.");
+        } else if (error.code === "auth/user-not-found") {
+          setIsLogin(false);
+          setError("Account not found. Switched to registration mode.");
+        } else if (error.code === "auth/weak-password") {
+          setError("Password should be at least 6 characters long.");
+        } else if (error.code === "auth/invalid-email") {
+          setError("Please enter a valid email address.");
+        } else if (error.code === "auth/too-many-requests") {
+          setError("Too many failed attempts. Please try again later.");
+        } else {
+          setError(error.message || "Authentication failed. Please try again.");
+        }
       }
     } finally {
       setLoading(false);
@@ -205,6 +211,7 @@ export default function Auth() {
                   <Input
                     id="name"
                     type="text"
+                    autoComplete="current-name"
                     placeholder="Enter your full name"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
@@ -220,6 +227,7 @@ export default function Auth() {
                 <Input
                   id="email"
                   type="email"
+                  autoComplete="current-email"
                   placeholder="Enter your email"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
@@ -234,6 +242,7 @@ export default function Auth() {
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={(e) =>
@@ -321,9 +330,21 @@ export default function Auth() {
                   type="button"
                   className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
                   disabled={loading}
-                  onClick={() => {
-                    // TODO: Implement forgot password
-                    alert("Forgot password functionality coming soon!");
+                  onClick={async () => {
+                    if (!formData.email) {
+                      setError("Please enter your email first.");
+                      return;
+                    }
+
+                    try {
+                      await resetPassword(formData.email);
+                      alert(
+                        "Password reset email sent. Please check your inbox.",
+                      );
+                    } catch (err: any) {
+                      console.error("Reset error:", err);
+                      setError(err.message || "Failed to send reset email.");
+                    }
                   }}
                 >
                   Forgot your password?
