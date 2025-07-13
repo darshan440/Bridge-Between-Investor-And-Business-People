@@ -30,6 +30,7 @@ import {
   Star,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ContactCard, extractContactInfo } from "@/components/ContactCard";
 
 // Mock data for business proposals
 const mockProposals = [
@@ -47,6 +48,16 @@ const mockProposals = [
     views: 234,
     interested: 12,
     tags: ["AI", "Healthcare", "B2B"],
+    authorProfile: {
+      uid: "user1",
+      fullName: "Dr. Priya Sharma",
+      email: "priya.sharma@example.com",
+      role: "business_person" as const,
+      mobileNumber: "+91 9876543210",
+      companyName: "MedTech Innovations",
+      designation: "Founder & CEO",
+      isComplete: true,
+    },
     featured: true,
   },
   {
