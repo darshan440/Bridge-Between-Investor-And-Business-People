@@ -38,7 +38,29 @@ export interface UserProfile {
   createdAt: any;
   updatedAt: any;
   isActive: boolean;
+  isComplete?: boolean;
   profile?: {
+    fullName?: string;
+    mobileNumber?: string;
+    companyName?: string;
+    institutionName?: string;
+    designation?: string;
+    businessCategory?: string;
+    briefDescription?: string;
+    investmentBudget?: string;
+    preferredSectors?: string[];
+    preferredStages?: string[];
+    investmentExperience?: string;
+    investmentCriteria?: string;
+    areaOfExpertise?: string[];
+    professionalSummary?: string;
+    qualifications?: string;
+    yearsOfExperience?: string;
+    experienceYears?: string;
+    website?: string;
+    linkedIn?: string;
+    isComplete?: boolean;
+    // Legacy fields for backward compatibility
     company?: string;
     location?: string;
     bio?: string;
@@ -48,7 +70,6 @@ export interface UserProfile {
       min: number;
       max: number;
     };
-    preferredSectors?: string[];
   };
 }
 const getIP = async () => {
@@ -367,4 +388,65 @@ export const getAvailableRoles = async (): Promise<{
 export const hasAnyRole = async (roles: UserRole[]): Promise<boolean> => {
   const userRole = await getUserRole();
   return userRole ? roles.includes(userRole) : false;
+};
+
+// Check if profile completion is required for user role
+export const isProfileCompletionRequired = (role: UserRole): boolean => {
+  const rolesRequiringCompletion: UserRole[] = [
+    "business_person",
+    "investor",
+    "banker",
+    "business_advisor",
+  ];
+  return rolesRequiringCompletion.includes(role);
+};
+
+// Check if current user profile is complete
+export const isCurrentUserProfileComplete = async (): Promise<boolean> => {
+  const profile = await getCurrentUserProfile();
+  if (!profile) return false;
+
+  // Users and admins don't need profile completion
+  if (!isProfileCompletionRequired(profile.role)) {
+    return true;
+  }
+
+  return profile.isComplete === true;
+};
+
+// Complete user profile with role-specific data
+export const completeUserProfile = async (profileData: any): Promise<void> => {
+  if (!auth || !db) throw new Error("Firebase is not available");
+
+  const user = auth.currentUser;
+  if (!user) throw new Error("User not authenticated");
+
+  try {
+    const userRef = doc(db, COLLECTIONS.USERS, user.uid);
+
+    // Update user profile with completion data
+    await updateDoc(userRef, {
+      displayName: profileData.fullName,
+      isComplete: true,
+      profile: {
+        ...profileData,
+        isComplete: true,
+      },
+      updatedAt: serverTimestamp(),
+    });
+
+    // Also update Firebase Auth display name
+    if (profileData.fullName) {
+      await updateProfile(user, { displayName: profileData.fullName });
+    }
+
+    // Log profile completion
+    await logUserAction(user.uid, "PROFILE_COMPLETED", {
+      role: (await getUserRole()) || "unknown",
+      completedAt: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Profile completion error:", error);
+    throw new Error(error.message || "Profile completion failed");
+  }
 };
