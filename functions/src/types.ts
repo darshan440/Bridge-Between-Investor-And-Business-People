@@ -67,8 +67,30 @@ export interface UserProfile {
   id: string;
   email: string;
   role: string;
+  isComplete?: boolean;
   profile?: {
     name?: string;
+    fullName?: string;
+    mobileNumber?: string;
+    companyName?: string;
+    institutionName?: string;
+    designation?: string;
+    businessCategory?: string;
+    briefDescription?: string;
+    investmentBudget?: string;
+    preferredSectors?: string[];
+    preferredStages?: string[];
+    investmentExperience?: string;
+    investmentCriteria?: string;
+    areaOfExpertise?: string[];
+    professionalSummary?: string;
+    qualifications?: string;
+    yearsOfExperience?: string;
+    experienceYears?: string;
+    website?: string;
+    linkedIn?: string;
+    isComplete?: boolean;
+    // Legacy fields for backward compatibility
     bio?: string;
     experience?: number;
     skills?: string[];
@@ -76,6 +98,12 @@ export interface UserProfile {
   };
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface CompleteProfileData {
+  fullName: string;
+  mobileNumber: string;
+  [key: string]: any;
 }
 
 export interface Investment {
