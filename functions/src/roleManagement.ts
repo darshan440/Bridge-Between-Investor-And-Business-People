@@ -1,7 +1,30 @@
 import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
 import { ChangeUserRoleData } from "./types";
-import * as roleConfig from "./roles.json";
+
+// Role configuration - ideally this would be loaded from Firestore or a config service
+const roleConfig = {
+  roleMatrix: {
+    user: ["investor", "business_person", "business_advisor"],
+    investor: ["user", "business_person", "business_advisor"],
+    business_person: ["user", "investor", "business_advisor"],
+    business_advisor: ["user", "investor", "business_person"],
+    banker: [],
+    admin: [],
+  },
+  roleDescriptions: {
+    user: "General user with browsing privileges",
+    investor: "Can invest in business ideas and manage portfolio",
+    business_person: "Can post business ideas and seek investments",
+    business_advisor: "Can provide expert advice and guidance",
+    banker: "Can create loan schemes and assess risks",
+    admin: "Full system administration privileges",
+  },
+  restrictedRoles: ["banker", "admin"],
+  approvalRequired: {
+    business_advisor: false,
+  },
+};
 
 // Change user role with strict validation
 export const changeUserRole = onCall<ChangeUserRoleData>(async (request) => {
@@ -157,7 +180,7 @@ export const getAvailableRoles = onCall(async (request) => {
       ] || [];
 
     // Add role descriptions for each allowed role
-    const availableRoles = allowedRoles.map((role) => ({
+    const availableRoles = allowedRoles.map((role: string) => ({
       role,
       description:
         roleConfig.roleDescriptions[
