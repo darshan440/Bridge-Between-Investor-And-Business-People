@@ -17,6 +17,9 @@ import PostSolution from "./pages/PostSolution";
 import QueryPanel from "./pages/QueryPanel";
 import PostLoanSchemes from "./pages/PostLoanSchemes";
 import ViewAdvisorSuggestions from "./pages/ViewAdvisorSuggestions";
+import Browse from "./pages/Browse";
+import Categories from "./pages/Categories";
+import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -60,9 +63,9 @@ const App = () => (
               <Route path="/view-loan-proposals" element={<Dashboard />} />
               <Route path="/risk-assessment" element={<Dashboard />} />
               {/* User Routes */}
-              <Route path="/browse" element={<Dashboard />} />
-              <Route path="/categories" element={<Dashboard />} />
-              <Route path="/help" element={<Dashboard />} />
+              <Route path="/browse" element={<Browse />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/help" element={<Help />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
