@@ -21,6 +21,7 @@ import {
   resetPassword,
   signInUser,
   changeUserRole,
+  isProfileCompletionRequired,
 } from "@/lib/auth";
 import { USER_ROLES, UserRole, isFirebaseEnabled } from "@/lib/firebase";
 import { ArrowLeft, Building, Loader2 } from "lucide-react";
@@ -88,7 +89,15 @@ export default function Auth() {
           }
         }
 
-        navigate("/dashboard", { state: { role: finalRole } });
+        // Check if profile completion is required
+        if (
+          isProfileCompletionRequired(finalRole as any) &&
+          !userProfile.isComplete
+        ) {
+          navigate("/complete-profile", { state: { role: finalRole } });
+        } else {
+          navigate("/dashboard", { state: { role: finalRole } });
+        }
       } else {
         // Sign up new user
         if (!formData.name || !formData.role) {
@@ -103,7 +112,13 @@ export default function Auth() {
           formData.role,
         );
         console.log("User registered:", userProfile);
-        navigate("/dashboard", { state: { role: userProfile.role } });
+
+        // Check if profile completion is required for new user
+        if (isProfileCompletionRequired(userProfile.role)) {
+          navigate("/complete-profile", { state: { role: userProfile.role } });
+        } else {
+          navigate("/dashboard", { state: { role: userProfile.role } });
+        }
       }
     } catch (error: any) {
       // If login failed because user doesn't exist
