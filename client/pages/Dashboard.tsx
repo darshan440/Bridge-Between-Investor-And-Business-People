@@ -20,7 +20,10 @@ import {
   LogOut,
   Menu,
   X,
+  Settings,
 } from "lucide-react";
+import { UserDashboard } from "@/components/UserDashboard";
+import { RoleChangeModal } from "@/components/RoleChangeModal";
 
 const roleConfigs = {
   business_person: {
@@ -90,6 +93,7 @@ export default function Dashboard() {
   const location = useLocation();
   const [role, setRole] = useState<string>("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   useEffect(() => {
     // Get role from navigation state or localStorage
@@ -110,6 +114,12 @@ export default function Dashboard() {
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
+  };
+
+  const handleRoleChange = (newRole: string) => {
+    setRole(newRole);
+    localStorage.setItem("userRole", newRole);
+    setShowRoleModal(false);
   };
 
   return (
@@ -152,6 +162,15 @@ export default function Dashboard() {
                 <span>{item.label}</span>
               </Link>
             ))}
+
+            {/* Role Change Button */}
+            <button
+              onClick={() => setShowRoleModal(true)}
+              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+              <span>Change Role</span>
+            </button>
           </nav>
         </div>
 
@@ -183,86 +202,89 @@ export default function Dashboard() {
 
         {/* Dashboard content */}
         <div className="p-6">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {config.title}
-            </h1>
-            <p className="text-gray-600">
-              Manage your {role.replace("_", " ")} activities and grow your
-              network
-            </p>
-          </div>
+          {role === "user" ? (
+            <UserDashboard onRoleChanged={handleRoleChange} />
+          ) : (
+            <div>
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  {config.title}
+                </h1>
+                <p className="text-gray-600">
+                  Manage your {role.replace("_", " ")} activities and grow your
+                  network
+                </p>
+              </div>
 
-          {/* Quick Actions */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {config.menuItems.slice(0, 3).map((item, index) => (
-              <Card
-                key={index}
-                className="hover:shadow-md transition-shadow cursor-pointer"
-              >
-                <Link to={item.href}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <item.icon className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <CardTitle className="text-lg">{item.label}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription>
-                      {index === 0 &&
-                        role === "business_person" &&
-                        "Share your innovative business ideas with potential investors"}
-                      {index === 1 &&
-                        role === "business_person" &&
-                        "Get expert advice from experienced business advisors"}
-                      {index === 0 &&
-                        role === "investor" &&
-                        "Discover promising business opportunities to invest in"}
-                      {index === 1 &&
-                        role === "investor" &&
-                        "Create and share your investment proposals"}
-                      {index === 0 &&
-                        role === "business_advisor" &&
-                        "Share valuable insights and tips with entrepreneurs"}
-                      {index === 1 &&
-                        role === "business_advisor" &&
-                        "Review and respond to business queries"}
-                      {index === 0 &&
-                        role === "banker" &&
-                        "Create and manage loan schemes for businesses"}
-                      {index === 1 &&
-                        role === "banker" &&
-                        "Review loan applications and proposals"}
-                      {index === 0 &&
-                        role === "user" &&
-                        "Explore investment and business opportunities"}
-                      {index === 1 &&
-                        role === "user" &&
-                        "Browse different business categories and sectors"}
-                    </CardDescription>
-                  </CardContent>
-                </Link>
+              {/* Quick Actions */}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {config.menuItems.slice(0, 3).map((item, index) => (
+                  <Card
+                    key={index}
+                    className="hover:shadow-md transition-shadow cursor-pointer"
+                  >
+                    <Link to={item.href}>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <item.icon className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <CardTitle className="text-lg">
+                            {item.label}
+                          </CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription>
+                          {index === 0 &&
+                            role === "business_person" &&
+                            "Share your innovative business ideas with potential investors"}
+                          {index === 1 &&
+                            role === "business_person" &&
+                            "Get expert advice from experienced business advisors"}
+                          {index === 0 &&
+                            role === "investor" &&
+                            "Discover promising business opportunities to invest in"}
+                          {index === 1 &&
+                            role === "investor" &&
+                            "Create and share your investment proposals"}
+                          {index === 0 &&
+                            role === "business_advisor" &&
+                            "Share valuable insights and tips with entrepreneurs"}
+                          {index === 1 &&
+                            role === "business_advisor" &&
+                            "Review and respond to business queries"}
+                          {index === 0 &&
+                            role === "banker" &&
+                            "Create and manage loan schemes for businesses"}
+                          {index === 1 &&
+                            role === "banker" &&
+                            "Review loan applications and proposals"}
+                        </CardDescription>
+                      </CardContent>
+                    </Link>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Placeholder Notice */}
+              <Card className="bg-blue-50 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="text-blue-900">
+                    Dashboard Under Development
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-blue-800">
+                    This is a placeholder dashboard. Full functionality
+                    including forms, data visualization, and interactive
+                    features will be implemented in the next phase of
+                    development.
+                  </CardDescription>
+                </CardContent>
               </Card>
-            ))}
-          </div>
-
-          {/* Placeholder Notice */}
-          <Card className="bg-blue-50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="text-blue-900">
-                Dashboard Under Development
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="text-blue-800">
-                This is a placeholder dashboard. Full functionality including
-                forms, data visualization, and interactive features will be
-                implemented in the next phase of development.
-              </CardDescription>
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </div>
       </div>
 
@@ -273,6 +295,13 @@ export default function Dashboard() {
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
+
+      {/* Role Change Modal */}
+      <RoleChangeModal
+        isOpen={showRoleModal}
+        onClose={() => setShowRoleModal(false)}
+        onRoleChanged={handleRoleChange}
+      />
     </div>
   );
 }
