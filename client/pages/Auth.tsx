@@ -70,7 +70,7 @@ export default function Auth() {
         }, 100);
         return;
       }
-      if (error.code === 'auth/wrong-password') {
+      if (error.code === "auth/wrong-password") {
         setError("Wrong password. Please try again.");
       } else if (error.code === "auth/email-already-in-use") {
         setError("Email already registered. Redirecting to login...");
@@ -256,17 +256,23 @@ export default function Auth() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role">I am a... *</Label>
+                <Label htmlFor="role">
+                  {isLogin ? "Login as... (optional)" : "I am a... *"}
+                </Label>
                 <Select
                   value={formData.role}
                   onValueChange={(value) =>
                     handleInputChange("role", value as UserRole)
                   }
-                  required
+                  required={!isLogin}
                   disabled={loading}
                 >
                   <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select your role" />
+                    <SelectValue
+                      placeholder={
+                        isLogin ? "Select role (optional)" : "Select your role"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={USER_ROLES.USER}>User</SelectItem>
@@ -276,12 +282,20 @@ export default function Auth() {
                     <SelectItem value={USER_ROLES.INVESTOR}>
                       Investor
                     </SelectItem>
-                    <SelectItem value={USER_ROLES.BANKER}>Banker</SelectItem>
                     <SelectItem value={USER_ROLES.BUSINESS_ADVISOR}>
                       Business Advisor
                     </SelectItem>
+                    <SelectItem value={USER_ROLES.BANKER} disabled>
+                      Banker (Restricted)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                {isLogin && formData.role && (
+                  <p className="text-xs text-blue-600">
+                    You'll be logged in with {formData.role.replace("_", " ")}{" "}
+                    privileges
+                  </p>
+                )}
               </div>
 
               <Button
