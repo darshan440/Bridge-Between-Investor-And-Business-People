@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Building,
   User,
@@ -21,9 +22,12 @@ import {
   Menu,
   X,
   Settings,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 import { UserDashboard } from "@/components/UserDashboard";
 import { RoleChangeModal } from "@/components/RoleChangeModal";
+import { getCurrentUserProfile, isProfileCompletionRequired } from "@/lib/auth";
 
 const roleConfigs = {
   business_person: {
