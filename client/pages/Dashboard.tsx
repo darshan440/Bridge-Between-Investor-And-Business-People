@@ -95,9 +95,12 @@ const roleConfigs = {
 
 export default function Dashboard() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [role, setRole] = useState<string>("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     // Get role from navigation state or localStorage
@@ -108,6 +111,23 @@ export default function Dashboard() {
       localStorage.setItem("userRole", userRole);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    const checkProfileCompletion = async () => {
+      try {
+        const profile = await getCurrentUserProfile();
+        setUserProfile(profile);
+
+        if (profile && isProfileCompletionRequired(profile.role)) {
+          setProfileIncomplete(!profile.isComplete);
+        }
+      } catch (error) {
+        console.error("Error checking profile completion:", error);
+      }
+    };
+
+    checkProfileCompletion();
+  }, []);
 
   const config =
     roleConfigs[role as keyof typeof roleConfigs] || roleConfigs.user;
@@ -203,6 +223,33 @@ export default function Dashboard() {
             <div></div>
           </div>
         </div>
+
+        {/* Profile Completion Banner */}
+        {profileIncomplete && userProfile && (
+          <div className="p-4 border-b bg-amber-50">
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-amber-800">
+                    Complete your profile to unlock full access
+                  </span>
+                  <p className="text-amber-700 text-sm mt-1">
+                    Your contact information will be visible in your posts,
+                    helping others connect with you directly.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => navigate("/complete-profile")}
+                  className="ml-4 bg-amber-600 hover:bg-amber-700"
+                >
+                  Complete Profile
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         {/* Dashboard content */}
         <div className="p-6">
