@@ -146,7 +146,7 @@ export default function ViewProposals() {
     "All Budgets",
     "Under ₹10L",
     "₹10L - ₹20L",
-    "₹20L - ₹50L",
+    "₹20L - ���50L",
     "Above ₹50L",
   ];
 
@@ -344,6 +344,17 @@ export default function ViewProposals() {
                       {proposal.interested} interested
                     </span>
                   </div>
+
+                  {/* Author Contact Information (minimal) */}
+                  {proposal.authorProfile && (
+                    <div className="mb-3">
+                      <ContactCard
+                        authorInfo={proposal.authorProfile}
+                        variant="minimal"
+                        className="text-xs"
+                      />
+                    </div>
+                  )}
 
                   <div className="flex gap-2">
                     <Button size="sm" className="flex-1">
