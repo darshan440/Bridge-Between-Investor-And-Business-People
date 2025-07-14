@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
   Building,
   User,
@@ -24,10 +26,25 @@ import {
   Settings,
   AlertCircle,
   CheckCircle,
+  BarChart3,
+  PieChart,
+  Target,
+  Clock,
+  Bell,
 } from "lucide-react";
 import { UserDashboard } from "@/components/UserDashboard";
 import { RoleChangeModal } from "@/components/RoleChangeModal";
+import { Notifications } from "@/components/Notifications";
 import { getCurrentUserProfile, isProfileCompletionRequired } from "@/lib/auth";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  limit,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const roleConfigs = {
   business_person: {
@@ -53,9 +70,9 @@ const roleConfigs = {
         href: "/view-proposals",
       },
       {
-        label: "Post Investment Proposal",
+        label: "My Investments",
         icon: DollarSign,
-        href: "/post-investment",
+        href: "/my-investments",
       },
       { label: "Portfolio Tracking", icon: TrendingUp, href: "/portfolio" },
     ],
@@ -82,6 +99,15 @@ const roleConfigs = {
       { label: "Risk Assessment", icon: TrendingUp, href: "/risk-assessment" },
     ],
   },
+  admin: {
+    title: "Admin Dashboard",
+    icon: Settings,
+    menuItems: [
+      { label: "Manage Users", icon: Users, href: "/admin/users" },
+      { label: "View Analytics", icon: BarChart3, href: "/admin/analytics" },
+      { label: "Approval Queue", icon: CheckCircle, href: "/admin/approvals" },
+    ],
+  },
   user: {
     title: "User Dashboard",
     icon: User,
@@ -101,6 +127,8 @@ export default function Dashboard() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<any>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Get role from navigation state or localStorage
@@ -129,6 +157,274 @@ export default function Dashboard() {
     checkProfileCompletion();
   }, []);
 
+  useEffect(() => {
+    if (userProfile?.uid) {
+      setupRealTimeData();
+    }
+  }, [userProfile, role]);
+
+  const setupRealTimeData = () => {
+    if (!userProfile?.uid) return;
+
+    const unsubscribers: (() => void)[] = [];
+
+    // Setup real-time listeners based on role
+    switch (role) {
+      case "business_person":
+        setupBusinessPersonData(unsubscribers);
+        break;
+      case "investor":
+        setupInvestorData(unsubscribers);
+        break;
+      case "business_advisor":
+        setupAdvisorData(unsubscribers);
+        break;
+      case "banker":
+        setupBankerData(unsubscribers);
+        break;
+      case "admin":
+        setupAdminData(unsubscribers);
+        break;
+      default:
+        setLoading(false);
+    }
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
+  };
+
+  const setupBusinessPersonData = (unsubscribers: (() => void)[]) => {
+    // Listen to user's business ideas
+    const businessIdeasRef = collection(db, "businessIdeas");
+    const businessIdeasQuery = query(
+      businessIdeasRef,
+      where("userId", "==", userProfile.uid),
+      orderBy("createdAt", "desc"),
+      limit(5),
+    );
+
+    const unsubscribeIdeas = onSnapshot(businessIdeasQuery, (snapshot) => {
+      const ideas = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Listen to investment proposals for user's ideas
+      const proposalsRef = collection(db, "investmentProposals");
+      const proposalsQuery = query(
+        proposalsRef,
+        where("businessIdeaUserId", "==", userProfile.uid),
+        orderBy("createdAt", "desc"),
+        limit(5),
+      );
+
+      const unsubscribeProposals = onSnapshot(
+        proposalsQuery,
+        (proposalsSnapshot) => {
+          const proposals = proposalsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+
+          setDashboardData({
+            businessIdeas: ideas,
+            proposals,
+            stats: {
+              totalIdeas: ideas.length,
+              totalProposals: proposals.length,
+              totalViews: ideas.reduce(
+                (sum, idea) => sum + (idea.views || 0),
+                0,
+              ),
+              totalInterested: ideas.reduce(
+                (sum, idea) => sum + (idea.interested || 0),
+                0,
+              ),
+            },
+          });
+          setLoading(false);
+        },
+      );
+
+      unsubscribers.push(unsubscribeProposals);
+    });
+
+    unsubscribers.push(unsubscribeIdeas);
+  };
+
+  const setupInvestorData = (unsubscribers: (() => void)[]) => {
+    // Listen to investor's proposals and portfolio
+    const investmentsRef = collection(db, "investments");
+    const investmentsQuery = query(
+      investmentsRef,
+      where("investorId", "==", userProfile.uid),
+      orderBy("createdAt", "desc"),
+      limit(5),
+    );
+
+    const unsubscribeInvestments = onSnapshot(investmentsQuery, (snapshot) => {
+      const investments = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Calculate portfolio metrics
+      const totalInvested = investments.reduce(
+        (sum, inv) => sum + (inv.amount || 0),
+        0,
+      );
+      const totalValue = investments.reduce(
+        (sum, inv) => sum + (inv.currentValue || inv.amount || 0),
+        0,
+      );
+      const roi =
+        totalInvested > 0
+          ? ((totalValue - totalInvested) / totalInvested) * 100
+          : 0;
+
+      setDashboardData({
+        investments,
+        portfolio: {
+          totalInvested,
+          totalValue,
+          roi,
+          activeInvestments: investments.filter(
+            (inv) => inv.status === "active",
+          ).length,
+        },
+        stats: {
+          totalInvestments: investments.length,
+          totalAmount: totalInvested,
+          averageROI: roi,
+          bestPerforming: investments[0]?.businessIdeaTitle || "None",
+        },
+      });
+      setLoading(false);
+    });
+
+    unsubscribers.push(unsubscribeInvestments);
+  };
+
+  const setupAdvisorData = (unsubscribers: (() => void)[]) => {
+    // Listen to queries and solutions
+    const queriesRef = collection(db, "queries");
+    const queriesQuery = query(
+      queriesRef,
+      where("status", "==", "open"),
+      orderBy("createdAt", "desc"),
+      limit(5),
+    );
+
+    const unsubscribeQueries = onSnapshot(queriesQuery, (snapshot) => {
+      const queries = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Get advisor's solutions
+      const solutionsRef = collection(db, "solutions");
+      const solutionsQuery = query(
+        solutionsRef,
+        where("advisorId", "==", userProfile.uid),
+        orderBy("createdAt", "desc"),
+        limit(5),
+      );
+
+      const unsubscribeSolutions = onSnapshot(
+        solutionsQuery,
+        (solutionsSnapshot) => {
+          const solutions = solutionsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+
+          setDashboardData({
+            openQueries: queries,
+            mySolutions: solutions,
+            stats: {
+              totalSolutions: solutions.length,
+              totalQueries: queries.length,
+              helpfulVotes: solutions.reduce(
+                (sum, sol) => sum + (sol.helpful || 0),
+                0,
+              ),
+              averageRating: 4.5, // This would be calculated from actual ratings
+            },
+          });
+          setLoading(false);
+        },
+      );
+
+      unsubscribers.push(unsubscribeSolutions);
+    });
+
+    unsubscribers.push(unsubscribeQueries);
+  };
+
+  const setupBankerData = (unsubscribers: (() => void)[]) => {
+    // Listen to loan schemes and applications
+    const loanSchemesRef = collection(db, "loanSchemes");
+    const loanSchemesQuery = query(
+      loanSchemesRef,
+      where("userId", "==", userProfile.uid),
+      orderBy("createdAt", "desc"),
+      limit(5),
+    );
+
+    const unsubscribeSchemes = onSnapshot(loanSchemesQuery, (snapshot) => {
+      const schemes = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setDashboardData({
+        loanSchemes: schemes,
+        stats: {
+          totalSchemes: schemes.length,
+          totalApplications: schemes.reduce(
+            (sum, scheme) => sum + (scheme.applications || 0),
+            0,
+          ),
+          approvalRate: 75, // This would be calculated from actual data
+          averageAmount: schemes.length > 0 ? 5000000 : 0, // Average loan amount
+        },
+      });
+      setLoading(false);
+    });
+
+    unsubscribers.push(unsubscribeSchemes);
+  };
+
+  const setupAdminData = (unsubscribers: (() => void)[]) => {
+    // Admin sees aggregated data
+    const usersRef = collection(db, "users");
+    const unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
+      const users = snapshot.docs.map((doc) => doc.data());
+      const usersByRole = users.reduce(
+        (acc, user) => {
+          acc[user.role] = (acc[user.role] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      setDashboardData({
+        totalUsers: users.length,
+        usersByRole,
+        stats: {
+          totalBusinessIdeas: 0, // These would be fetched from actual collections
+          totalInvestments: 0,
+          totalQueries: 0,
+          platformActivity: 85, // Activity percentage
+        },
+      });
+      setLoading(false);
+    });
+
+    unsubscribers.push(unsubscribeUsers);
+  };
+
   const config =
     roleConfigs[role as keyof typeof roleConfigs] || roleConfigs.user;
   const IconComponent = config.icon;
@@ -140,17 +436,685 @@ export default function Dashboard() {
       .join(" ");
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(amount);
+  };
+
   const handleRoleChange = (newRole: string) => {
     setRole(newRole);
     localStorage.setItem("userRole", newRole);
     setShowRoleModal(false);
+    window.location.reload(); // Reload to update dashboard data
   };
+
+  const renderRoleSpecificContent = () => {
+    if (loading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    switch (role) {
+      case "business_person":
+        return renderBusinessPersonDashboard();
+      case "investor":
+        return renderInvestorDashboard();
+      case "business_advisor":
+        return renderAdvisorDashboard();
+      case "banker":
+        return renderBankerDashboard();
+      case "admin":
+        return renderAdminDashboard();
+      default:
+        return <UserDashboard onRoleChanged={handleRoleChange} />;
+    }
+  };
+
+  const renderBusinessPersonDashboard = () => (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Lightbulb className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Ideas</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalIdeas || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <DollarSign className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Proposals</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalProposals || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Views</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalViews || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Target className="h-8 w-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Interested</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalInterested || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Business Ideas */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Business Ideas</CardTitle>
+          <CardDescription>
+            Your latest posted business ideas and their performance
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {dashboardData.businessIdeas?.length > 0 ? (
+            <div className="space-y-4">
+              {dashboardData.businessIdeas.map((idea: any) => (
+                <div
+                  key={idea.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <h4 className="font-medium">{idea.title}</h4>
+                    <p className="text-sm text-gray-600 truncate">
+                      {idea.description}
+                    </p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <Badge variant="secondary">{idea.category}</Badge>
+                      <span className="text-xs text-gray-500">
+                        {idea.views || 0} views
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {idea.interested || 0} interested
+                      </span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline">
+                    View Details
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Lightbulb className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No business ideas yet
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Get started by posting your first business idea.
+              </p>
+              <div className="mt-6">
+                <Link to="/post-idea">
+                  <Button>
+                    <Lightbulb className="mr-2 h-4 w-4" />
+                    Post Your First Idea
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderInvestorDashboard = () => (
+    <div className="space-y-6">
+      {/* Portfolio Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <DollarSign className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Total Invested
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(dashboardData.portfolio?.totalInvested || 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <TrendingUp className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Portfolio Value
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(dashboardData.portfolio?.totalValue || 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <BarChart3 className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">ROI</p>
+                <p
+                  className={`text-2xl font-bold ${(dashboardData.portfolio?.roi || 0) >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
+                  {(dashboardData.portfolio?.roi || 0).toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Target className="h-8 w-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Active Investments
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.portfolio?.activeInvestments || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Investments */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Investments</CardTitle>
+          <CardDescription>
+            Your latest investment activities and performance
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {dashboardData.investments?.length > 0 ? (
+            <div className="space-y-4">
+              {dashboardData.investments.map((investment: any) => (
+                <div
+                  key={investment.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <h4 className="font-medium">
+                      {investment.businessIdeaTitle}
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      {formatCurrency(investment.amount)} invested
+                    </p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <Badge
+                        variant={
+                          investment.status === "active"
+                            ? "default"
+                            : "secondary"
+                        }
+                        className={
+                          investment.status === "active" ? "bg-green-600" : ""
+                        }
+                      >
+                        {investment.status}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {investment.category}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      {formatCurrency(
+                        investment.currentValue || investment.amount,
+                      )}
+                    </p>
+                    <p
+                      className={`text-sm ${(investment.currentValue || investment.amount) >= investment.amount ? "text-green-600" : "text-red-600"}`}
+                    >
+                      {(
+                        (((investment.currentValue || investment.amount) -
+                          investment.amount) /
+                          investment.amount) *
+                        100
+                      ).toFixed(1)}
+                      %
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <TrendingUp className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No investments yet
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Start investing in promising business ideas.
+              </p>
+              <div className="mt-6">
+                <Link to="/view-proposals">
+                  <Button>
+                    <TrendingUp className="mr-2 h-4 w-4" />
+                    Explore Opportunities
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderAdvisorDashboard = () => (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <MessageSquare className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Solutions Posted
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalSolutions || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <FileText className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Open Queries
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalQueries || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Helpful Votes
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.helpfulVotes || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Target className="h-8 w-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Avg Rating</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {(dashboardData.stats?.averageRating || 0).toFixed(1)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Open Queries */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Open Business Queries</CardTitle>
+          <CardDescription>Help businesses with your expertise</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {dashboardData.openQueries?.length > 0 ? (
+            <div className="space-y-4">
+              {dashboardData.openQueries.map((query: any) => (
+                <div
+                  key={query.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <h4 className="font-medium">{query.title}</h4>
+                    <p className="text-sm text-gray-600 truncate">
+                      {query.description}
+                    </p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <Badge
+                        variant={
+                          query.priority === "High"
+                            ? "destructive"
+                            : "secondary"
+                        }
+                      >
+                        {query.priority} Priority
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {query.category}
+                      </span>
+                    </div>
+                  </div>
+                  <Button size="sm">Answer Query</Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No open queries
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Check back later for new queries to answer.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderBankerDashboard = () => (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <DollarSign className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Loan Schemes
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalSchemes || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <FileText className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Applications
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalApplications || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <BarChart3 className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Approval Rate
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.approvalRate || 0}%
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Target className="h-8 w-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Avg Amount</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatCurrency(dashboardData.stats?.averageAmount || 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Loan Schemes */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Loan Schemes</CardTitle>
+          <CardDescription>
+            Manage your active loan schemes and applications
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {dashboardData.loanSchemes?.length > 0 ? (
+            <div className="space-y-4">
+              {dashboardData.loanSchemes.map((scheme: any) => (
+                <div
+                  key={scheme.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <h4 className="font-medium">{scheme.schemeName}</h4>
+                    <p className="text-sm text-gray-600">
+                      {scheme.loanType} • {scheme.interestRate} interest
+                    </p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <Badge variant="default" className="bg-green-600">
+                        Active
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {scheme.applications || 0} applications
+                      </span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline">
+                    Manage
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <DollarSign className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No loan schemes yet
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Create your first loan scheme to help businesses.
+              </p>
+              <div className="mt-6">
+                <Link to="/post-loan-schemes">
+                  <Button>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Post Loan Scheme
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderAdminDashboard = () => (
+    <div className="space-y-6">
+      {/* Platform Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Users</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.totalUsers || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Lightbulb className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Business Ideas
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalBusinessIdeas || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <DollarSign className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Investments</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.totalInvestments || 0}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <BarChart3 className="h-8 w-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Activity</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {dashboardData.stats?.platformActivity || 0}%
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* User Distribution */}
+      <Card>
+        <CardHeader>
+          <CardTitle>User Distribution by Role</CardTitle>
+          <CardDescription>
+            Overview of platform users across different roles
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {Object.entries(dashboardData.usersByRole || {}).map(
+              ([role, count]) => (
+                <div key={role} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Badge variant="secondary">{formatRoleName(role)}</Badge>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-32">
+                      <Progress
+                        value={
+                          ((count as number) / dashboardData.totalUsers) * 100
+                        }
+                        className="w-full"
+                      />
+                    </div>
+                    <span className="text-sm font-medium w-8">
+                      {count as number}
+                    </span>
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
       >
         <div className="flex items-center justify-between h-16 px-6 bg-blue-600 text-white">
           <div className="flex items-center space-x-2">
@@ -187,14 +1151,25 @@ export default function Dashboard() {
               </Link>
             ))}
 
-            {/* Role Change Button */}
-            <button
-              onClick={() => setShowRoleModal(true)}
-              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+            {/* Profile Link */}
+            <Link
+              to="/profile"
+              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
             >
-              <Settings className="w-5 h-5" />
-              <span>Change Role</span>
-            </button>
+              <User className="w-5 h-5" />
+              <span>My Profile</span>
+            </Link>
+
+            {/* Role Change Button */}
+            {role !== "banker" && role !== "admin" && (
+              <button
+                onClick={() => setShowRoleModal(true)}
+                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+              >
+                <Settings className="w-5 h-5" />
+                <span>Change Role</span>
+              </button>
+            )}
           </nav>
         </div>
 
@@ -220,7 +1195,15 @@ export default function Dashboard() {
               <Menu className="w-6 h-6" />
             </button>
             <h1 className="font-semibold text-gray-900">{config.title}</h1>
-            <div></div>
+            <Notifications />
+          </div>
+        </div>
+
+        {/* Desktop header with notifications */}
+        <div className="hidden lg:block bg-white shadow-sm border-b">
+          <div className="flex items-center justify-between h-16 px-8">
+            <h1 className="text-2xl font-bold text-gray-900">{config.title}</h1>
+            <Notifications />
           </div>
         </div>
 
@@ -252,91 +1235,7 @@ export default function Dashboard() {
         )}
 
         {/* Dashboard content */}
-        <div className="p-6">
-          {role === "user" ? (
-            <UserDashboard onRoleChanged={handleRoleChange} />
-          ) : (
-            <div>
-              <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {config.title}
-                </h1>
-                <p className="text-gray-600">
-                  Manage your {role.replace("_", " ")} activities and grow your
-                  network
-                </p>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {config.menuItems.slice(0, 3).map((item, index) => (
-                  <Card
-                    key={index}
-                    className="hover:shadow-md transition-shadow cursor-pointer"
-                  >
-                    <Link to={item.href}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <item.icon className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <CardTitle className="text-lg">
-                            {item.label}
-                          </CardTitle>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription>
-                          {index === 0 &&
-                            role === "business_person" &&
-                            "Share your innovative business ideas with potential investors"}
-                          {index === 1 &&
-                            role === "business_person" &&
-                            "Get expert advice from experienced business advisors"}
-                          {index === 0 &&
-                            role === "investor" &&
-                            "Discover promising business opportunities to invest in"}
-                          {index === 1 &&
-                            role === "investor" &&
-                            "Create and share your investment proposals"}
-                          {index === 0 &&
-                            role === "business_advisor" &&
-                            "Share valuable insights and tips with entrepreneurs"}
-                          {index === 1 &&
-                            role === "business_advisor" &&
-                            "Review and respond to business queries"}
-                          {index === 0 &&
-                            role === "banker" &&
-                            "Create and manage loan schemes for businesses"}
-                          {index === 1 &&
-                            role === "banker" &&
-                            "Review loan applications and proposals"}
-                        </CardDescription>
-                      </CardContent>
-                    </Link>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Placeholder Notice */}
-              <Card className="bg-blue-50 border-blue-200">
-                <CardHeader>
-                  <CardTitle className="text-blue-900">
-                    Dashboard Under Development
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-blue-800">
-                    This is a placeholder dashboard. Full functionality
-                    including forms, data visualization, and interactive
-                    features will be implemented in the next phase of
-                    development.
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
+        <div className="p-6">{renderRoleSpecificContent()}</div>
       </div>
 
       {/* Overlay for mobile */}
