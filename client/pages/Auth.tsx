@@ -23,6 +23,8 @@ import {
   changeUserRole,
   isProfileCompletionRequired,
 } from "@/lib/auth";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { USER_ROLES, UserRole, isFirebaseEnabled } from "@/lib/firebase";
 import { ArrowLeft, Building, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -39,6 +41,56 @@ export default function Auth() {
     role: "" as UserRole,
   });
   const navigate = useNavigate();
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Create/update user profile in Firestore
+      const { setDoc, doc } = await import("firebase/firestore");
+      const { db, serverTimestamp } = await import("@/lib/firebase");
+
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          role: formData.role || "user",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          isActive: true,
+        },
+        { merge: true },
+      );
+
+      // Set user role if specified
+      if (formData.role) {
+        const { setUserRole } = await import("@/lib/auth");
+        await setUserRole(user.uid, formData.role);
+      }
+
+      const finalRole = formData.role || "user";
+
+      // Check if profile completion is required
+      if (isProfileCompletionRequired(finalRole as any)) {
+        navigate("/complete-profile", { state: { role: finalRole } });
+      } else {
+        navigate("/dashboard", { state: { role: finalRole } });
+      }
+    } catch (error: any) {
+      console.error("Google sign-in error:", error);
+      setError(error.message || "Failed to sign in with Google");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
