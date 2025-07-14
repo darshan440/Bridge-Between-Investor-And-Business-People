@@ -21,6 +21,7 @@ import Browse from "./pages/Browse";
 import Categories from "./pages/Categories";
 import Help from "./pages/Help";
 import CompleteProfile from "./pages/CompleteProfile";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/complete-profile" element={<CompleteProfile />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/dashboard" element={<Dashboard />} />
               {/* Business Person Routes */}
               <Route path="/post-idea" element={<PostIdea />} />
