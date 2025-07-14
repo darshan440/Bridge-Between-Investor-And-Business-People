@@ -1,17 +1,26 @@
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions/v1";
-import { BusinessIdea, Investment, PlatformAnalytics, Portfolio, RiskFactor, UserProfile } from "./types";
-import { onSchedule } from "firebase-functions/scheduler";
+import { onCall } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import {
+  BusinessIdea,
+  Investment,
+  PlatformAnalytics,
+  Portfolio,
+  RiskFactor,
+  UserProfile,
+  GenerateRiskAssessmentData,
+  UpdatePortfolioMetricsData,
+} from "./types";
 
 // Generate risk assessment for a business idea
-export const generateRiskAssessment = functions.https.onCall(
-  async (data: any, context: functions.https.CallableContext) => {
+export const generateRiskAssessment = onCall<GenerateRiskAssessmentData>(
+  async (request) => {
     // Check if user is a banker
-    if (!context.auth || context.auth.token?.role !== "banker") {
+    if (!request.auth || request.auth.token?.role !== "banker") {
       throw new Error("Only bankers can generate risk assessments.");
     }
 
-    const { businessIdeaId } = data;
+    const { businessIdeaId } = request.data;
 
     try {
       // Get business idea details
@@ -48,9 +57,9 @@ export const generateRiskAssessment = functions.https.onCall(
         .add({
           businessIdeaId,
           targetUserId: businessIdea.userId,
-          assessorId: context.auth.uid,
-          riskScore: riskAssessment.overallScore,
-          riskLevel: riskAssessment.riskLevel,
+          assessorId: request.auth.uid,
+          riskScore: riskAssessment.score,
+          riskLevel: riskAssessment.level,
           factors: riskAssessment.factors,
           recommendations: riskAssessment.recommendations,
           assessmentDate: admin.firestore.FieldValue.serverTimestamp(),
@@ -58,19 +67,18 @@ export const generateRiskAssessment = functions.https.onCall(
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-      // Log the assessment
+      // Log risk assessment generation
       await admin
         .firestore()
         .collection("logs")
         .add({
-          userId: context.auth.uid,
+          userId: request.auth.uid,
           action: "RISK_ASSESSMENT_GENERATED",
           data: {
-            assessmentId: assessmentRef.id,
             businessIdeaId,
-            targetUserId: businessIdea.userId,
-            riskScore: riskAssessment.overallScore,
-            riskLevel: riskAssessment.riskLevel,
+            assessmentId: assessmentRef.id,
+            riskScore: riskAssessment.score,
+            riskLevel: riskAssessment.level,
           },
           timestamp: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -78,7 +86,9 @@ export const generateRiskAssessment = functions.https.onCall(
       return {
         success: true,
         assessmentId: assessmentRef.id,
-        riskAssessment,
+        riskScore: riskAssessment.score,
+        riskLevel: riskAssessment.level,
+        recommendations: riskAssessment.recommendations,
       };
     } catch (error) {
       console.error("Error generating risk assessment:", error);
@@ -87,69 +97,217 @@ export const generateRiskAssessment = functions.https.onCall(
   },
 );
 
+// Calculate risk score based on business idea and user profile
+function calculateRiskScore(
+  businessIdea: BusinessIdea,
+  userProfile: UserProfile,
+): {
+  score: number;
+  level: string;
+  factors: Record<string, RiskFactor>;
+  recommendations: string[];
+} {
+  const factors: Record<string, RiskFactor> = {};
+  let totalScore = 0;
+  const recommendations: string[] = [];
+
+  // Market factor (20% weight)
+  const marketScore = evaluateMarketRisk(businessIdea);
+  factors.market = { score: marketScore, details: {} };
+  totalScore += marketScore * 0.2;
+
+  // Team factor (25% weight)
+  const teamScore = evaluateTeamRisk(businessIdea, userProfile);
+  factors.team = { score: teamScore, details: {} };
+  totalScore += teamScore * 0.25;
+
+  // Financial factor (30% weight)
+  const financialScore = evaluateFinancialRisk(businessIdea);
+  factors.financial = { score: financialScore, details: {} };
+  totalScore += financialScore * 0.3;
+
+  // Technology factor (15% weight)
+  const technologyScore = evaluateTechnologyRisk(businessIdea);
+  factors.technology = { score: technologyScore, details: {} };
+  totalScore += technologyScore * 0.15;
+
+  // Competition factor (10% weight)
+  const competitionScore = evaluateCompetitionRisk(businessIdea);
+  factors.competition = { score: competitionScore, details: {} };
+  totalScore += competitionScore * 0.1;
+
+  // Determine risk level
+  let riskLevel: string;
+  if (totalScore >= 80) {
+    riskLevel = "LOW";
+    recommendations.push("Excellent opportunity with minimal risk factors.");
+  } else if (totalScore >= 60) {
+    riskLevel = "MEDIUM";
+    recommendations.push(
+      "Good opportunity with manageable risk factors to monitor.",
+    );
+  } else if (totalScore >= 40) {
+    riskLevel = "HIGH";
+    recommendations.push(
+      "Consider additional due diligence before investment.",
+    );
+  } else {
+    riskLevel = "VERY_HIGH";
+    recommendations.push(
+      "Significant risk factors present. Investment not recommended without major improvements.",
+    );
+  }
+
+  return {
+    score: Math.round(totalScore),
+    level: riskLevel,
+    factors,
+    recommendations,
+  };
+}
+
+function evaluateMarketRisk(businessIdea: BusinessIdea): number {
+  // Simplified market risk evaluation
+  const category = businessIdea.category?.toLowerCase() || "";
+  const highGrowthSectors = [
+    "technology",
+    "healthcare",
+    "fintech",
+    "sustainability",
+  ];
+
+  if (highGrowthSectors.some((sector) => category.includes(sector))) {
+    return 75; // Lower risk for high-growth sectors
+  }
+
+  return 50; // Medium risk for other sectors
+}
+
+function evaluateTeamRisk(
+  businessIdea: BusinessIdea,
+  userProfile: UserProfile,
+): number {
+  let score = 50; // Base score
+
+  // Evaluate based on user profile experience
+  const experience = userProfile.profile?.experience || 0;
+  if (experience > 5) score += 20;
+  else if (experience > 2) score += 10;
+
+  // Team size factor
+  const teamSize = parseInt(businessIdea.teamInfo?.split(" ")[0] || "1");
+  if (teamSize >= 3) score += 15;
+  else if (teamSize >= 2) score += 10;
+
+  return Math.min(score, 100);
+}
+
+function evaluateFinancialRisk(businessIdea: BusinessIdea): number {
+  // Simplified financial risk evaluation
+  const budget = businessIdea.budget || "";
+  const amount = parseInt(budget.replace(/[^\d]/g, "")) || 0;
+
+  if (amount > 5000000) return 40; // Very high budget = higher risk
+  if (amount > 1000000) return 60; // High budget = medium risk
+  if (amount > 500000) return 75; // Medium budget = lower risk
+  return 85; // Low budget = lowest risk
+}
+
+function evaluateTechnologyRisk(businessIdea: BusinessIdea): number {
+  // Simplified technology risk evaluation
+  const description = businessIdea.description?.toLowerCase() || "";
+  const highTechTerms = [
+    "ai",
+    "blockchain",
+    "iot",
+    "machine learning",
+    "ar",
+    "vr",
+  ];
+
+  if (highTechTerms.some((term) => description.includes(term))) {
+    return 60; // Higher tech complexity = higher risk
+  }
+
+  return 75; // Standard technology risk
+}
+
+function evaluateCompetitionRisk(businessIdea: BusinessIdea): number {
+  // Simplified competition risk evaluation
+  const category = businessIdea.category?.toLowerCase() || "";
+  const highCompetitionSectors = ["e-commerce", "food delivery", "taxi"];
+
+  if (highCompetitionSectors.some((sector) => category.includes(sector))) {
+    return 45; // High competition = higher risk
+  }
+
+  return 70; // Medium competition risk
+}
+
 // Update portfolio metrics for an investor
-export const updatePortfolioMetrics = functions.https.onCall(
-  async (data: any, context: functions.https.CallableContext) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated.",
-      );
+export const updatePortfolioMetrics = onCall<UpdatePortfolioMetricsData>(
+  async (request) => {
+    // Check if user is an investor
+    if (!request.auth || request.auth.token?.role !== "investor") {
+      throw new Error("Only investors can update portfolio metrics.");
     }
 
-    const { investorId } = data;
+    const { investorId } = request.data;
 
-    // Only allow investors to update their own portfolio or bankers to update any
-    if (
-      context.auth.uid !== investorId &&
-      context.auth.token?.role !== "banker"
-    ) {
-      throw new Error("Insufficient permissions to update portfolio.");
+    // Ensure investor can only update their own portfolio
+    if (request.auth.uid !== investorId) {
+      throw new Error("Can only update your own portfolio.");
     }
 
     try {
-      // Get portfolio
-      const portfolioDoc = await admin
+      // Get all investments for this investor
+      const investmentsQuery = await admin
         .firestore()
-        .collection("portfolios")
-        .doc(investorId)
+        .collection("investments")
+        .where("investorId", "==", investorId)
         .get();
 
-      if (!portfolioDoc.exists) {
-        throw new Error("Portfolio not found.");
-      }
+      const investments: Investment[] = investmentsQuery.docs.map(
+        (doc) =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as Investment,
+      );
 
-      const portfolioData = portfolioDoc.data();
-      if (!portfolioData) {
-        throw new Error("Portfolio data not found.");
-      }
-      const portfolio = portfolioData as Portfolio;
-      const investments = portfolio.investments || [];
-
-      // Calculate updated metrics
+      // Calculate portfolio metrics
       const metrics = calculatePortfolioMetrics(investments);
 
-      // Update portfolio with new metrics
-      await admin.firestore().collection("portfolios").doc(investorId).update({
-        totalValue: metrics.totalValue,
-        roi: metrics.roi,
-        performance: metrics.performance,
-        diversification: metrics.diversification,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      // Update or create portfolio document
+      const portfolioRef = admin
+        .firestore()
+        .collection("portfolios")
+        .doc(investorId);
 
-      // Log metrics update
+      await portfolioRef.set(
+        {
+          userId: investorId,
+          investments,
+          totalValue: metrics.totalValue,
+          roi: metrics.roi,
+          performance: metrics.performance,
+          diversification: metrics.diversification,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      // Log portfolio update
       await admin
         .firestore()
         .collection("logs")
         .add({
-          userId: context.auth.uid,
-          action: "PORTFOLIO_METRICS_UPDATED",
+          userId: request.auth.uid,
+          action: "PORTFOLIO_UPDATED",
           data: {
-            investorId,
-            oldROI: portfolio.roi || 0,
-            newROI: metrics.roi,
             totalValue: metrics.totalValue,
+            roi: metrics.roi,
+            investmentCount: investments.length,
           },
           timestamp: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -165,421 +323,153 @@ export const updatePortfolioMetrics = functions.https.onCall(
   },
 );
 
-// Get platform analytics (admin only)
-export const getPlatformAnalytics = functions.https.onCall(
-  async (data, context: functions.https.CallableContext) => {
-    if (!context.auth || context.auth.token.role !== "admin") {
-      throw new functions.https.HttpsError(
-        "permission-denied",
-        "Only admins can access platform analytics.",
-      );
-    }
-
-  try {
-    const analytics = await generatePlatformAnalytics();
-    return analytics;
-  } catch (error) {
-    console.error("Error getting platform analytics:", error);
-    throw new Error("Failed to get platform analytics.");
-  }
-});
-
-// Helper function to calculate risk score
-function calculateRiskScore(
-  businessIdea: BusinessIdea,
-  userProfile: UserProfile,
-): {
-  overallScore: number;
-  riskLevel: string;
-  factors: Record<string, RiskFactor>;
-  recommendations: string[];
-} {
-  const factors: Record<string, RiskFactor> = {};
-  let totalScore = 0;
-
-  // Market risk (20%)
-  const marketRisk = assessMarketRisk(businessIdea);
-  factors.marketRisk = marketRisk;
-  totalScore += marketRisk.score * 0.2;
-
-  // Financial risk (25%)
-  const financialRisk = assessFinancialRisk(businessIdea);
-  factors.financialRisk = financialRisk;
-  totalScore += financialRisk.score * 0.25;
-
-  // Team risk (20%)
-  const teamRisk = assessTeamRisk(businessIdea, userProfile);
-  factors.teamRisk = teamRisk;
-  totalScore += teamRisk.score * 0.2;
-
-  // Technology risk (15%)
-  const technologyRisk = assessTechnologyRisk(businessIdea);
-  factors.technologyRisk = technologyRisk;
-  totalScore += technologyRisk.score * 0.15;
-
-  // Competition risk (20%)
-  const competitionRisk = assessCompetitionRisk(businessIdea);
-  factors.competitionRisk = competitionRisk;
-  totalScore += competitionRisk.score * 0.2;
-
-  const overallScore = Math.round(totalScore);
-  const riskLevel = getRiskLevel(overallScore);
-  const recommendations = generateRecommendations(factors, overallScore);
-
-  return {
-    overallScore,
-    riskLevel,
-    factors,
-    recommendations,
-  };
-}
-
-// Helper functions for risk assessment
-function assessMarketRisk(businessIdea: BusinessIdea): RiskFactor {
-  let score = 50; // Base score
-  const details: Record<string, string | number> = {};
-
-  // Adjust based on category
-  const highRiskCategories = ["Cryptocurrency", "Gaming", "Entertainment"];
-  const lowRiskCategories = ["Healthcare", "Education", "Agriculture"];
-
-  if (highRiskCategories.includes(businessIdea.category)) {
-    score += 20;
-    details.categoryRisk = "High";
-  } else if (lowRiskCategories.includes(businessIdea.category)) {
-    score -= 15;
-    details.categoryRisk = "Low";
-  } else {
-    details.categoryRisk = "Medium";
-  }
-
-  // Adjust based on target market
-  if (businessIdea.targetMarket?.toLowerCase().includes("global")) {
-    score += 10;
-    details.marketScope = "Global (Higher Risk)";
-  } else if (businessIdea.targetMarket?.toLowerCase().includes("local")) {
-    score -= 5;
-    details.marketScope = "Local (Lower Risk)";
-  }
-
-  return { score: Math.max(0, Math.min(100, score)), details };
-}
-
-function assessFinancialRisk(businessIdea: BusinessIdea): RiskFactor {
-  let score = 50;
-  const details: Record<string, string | number> = {};
-
-  // Parse budget amount
-  const budgetStr = businessIdea.budget?.replace(/[^\d]/g, "") || "0";
-  const budget = parseInt(budgetStr);
-
-  if (budget > 5000000) {
-    // > 50L
-    score += 25;
-    details.budgetRisk = "Very High";
-  } else if (budget > 2000000) {
-    // > 20L
-    score += 15;
-    details.budgetRisk = "High";
-  } else if (budget > 1000000) {
-    // > 10L
-    score += 5;
-    details.budgetRisk = "Medium";
-  } else {
-    score -= 10;
-    details.budgetRisk = "Low";
-  }
-
-  // Revenue model assessment
-  if (!businessIdea.revenueModel || businessIdea.revenueModel.length < 50) {
-    score += 15;
-    details.revenueModelRisk = "Unclear revenue model";
-  } else {
-    details.revenueModelRisk = "Well-defined revenue model";
-  }
-
-  return { score: Math.max(0, Math.min(100, score)), details };
-}
-
-function assessTeamRisk(
-  businessIdea: BusinessIdea,
-  userProfile: UserProfile,
-): RiskFactor {
-  let score = 50;
-  const details: Record<string, string | number> = {};
-
-  // Team size
-  const teamInfo = businessIdea.teamInfo || "";
-  if (teamInfo.length < 50) {
-    score += 20;
-    details.teamDescription = "Insufficient team information";
-  } else {
-    score -= 10;
-    details.teamDescription = "Good team information provided";
-  }
-
-  // User experience
-  const experience = userProfile.profile?.experience || 0;
-  if (experience > 5) {
-    score -= 15;
-    details.founderExperience = "Experienced founder";
-  } else if (experience > 2) {
-    score -= 5;
-    details.founderExperience = "Some experience";
-  } else {
-    score += 10;
-    details.founderExperience = "Limited experience";
-  }
-
-  return { score: Math.max(0, Math.min(100, score)), details };
-}
-
-function assessTechnologyRisk(businessIdea: BusinessIdea): RiskFactor {
-  let score = 50;
-  const details: Record<string, string | number> = {};
-
-  const techCategories = ["Technology", "AI", "Blockchain", "IoT"];
-  const description = businessIdea.description?.toLowerCase() || "";
-
-  if (techCategories.includes(businessIdea.category)) {
-    score += 15;
-    details.technologyComplexity = "High-tech solution";
-
-    // Check for specific high-risk technologies
-    if (description.includes("ai") || description.includes("blockchain")) {
-      score += 10;
-      details.emergingTech = "Uses emerging technologies";
-    }
-  } else {
-    score -= 5;
-    details.technologyComplexity = "Traditional business model";
-  }
-
-  return { score: Math.max(0, Math.min(100, score)), details };
-}
-
-function assessCompetitionRisk(businessIdea: BusinessIdea): RiskFactor {
-  let score = 50;
-  const details: Record<string, string | number> = {};
-
-  const description = businessIdea.description?.toLowerCase() || "";
-
-  // High competition indicators
-  if (description.includes("uber") || description.includes("airbnb")) {
-    score += 20;
-    details.competitionLevel = "High competition market";
-  } else if (
-    description.includes("unique") ||
-    description.includes("innovative")
-  ) {
-    score -= 10;
-    details.competitionLevel = "Claims uniqueness";
-  }
-
-  return { score: Math.max(0, Math.min(100, score)), details };
-}
-
-function getRiskLevel(score: number): string {
-  if (score >= 80) return "Very High";
-  if (score >= 60) return "High";
-  if (score >= 40) return "Medium";
-  if (score >= 20) return "Low";
-  return "Very Low";
-}
-
-function generateRecommendations(
-  factors: Record<string, RiskFactor>,
-  overallScore: number,
-): string[] {
-  const recommendations: string[] = [];
-
-  if (overallScore > 70) {
-    recommendations.push(
-      "Consider requiring additional collateral or higher interest rates",
-    );
-    recommendations.push("Recommend business mentorship programs");
-  }
-
-  if (factors.financialRisk?.score > 60) {
-    recommendations.push("Request detailed financial projections");
-    recommendations.push("Consider staged funding approach");
-  }
-
-  if (factors.teamRisk?.score > 60) {
-    recommendations.push("Evaluate team composition and experience");
-    recommendations.push("Suggest advisory board formation");
-  }
-
-  if (factors.marketRisk?.score > 60) {
-    recommendations.push("Conduct thorough market research");
-    recommendations.push("Consider pilot testing in smaller market");
-  }
-
-  if (recommendations.length === 0) {
-    recommendations.push("Business shows good potential for funding");
-    recommendations.push("Standard loan terms may be appropriate");
-  }
-
-  return recommendations;
-}
-
-// Helper function to calculate portfolio metrics
 function calculatePortfolioMetrics(investments: Investment[]): {
   totalValue: number;
   roi: number;
-  performance: {
-    byCategory: Record<string, number>;
-    bestPerforming: string;
-    worstPerforming: string;
-  };
-  diversification: {
-    score: number;
-    categories: number;
-    recommendation: string;
-  };
+  performance: Portfolio["performance"];
+  diversification: Portfolio["diversification"];
 } {
-  const totalInvested = investments.reduce(
-    (sum, inv) => sum + (inv.amount || 0),
-    0,
-  );
-  const totalValue = investments.reduce(
-    (sum, inv) => sum + (inv.currentValue || inv.amount || 0),
-    0,
-  );
+  if (investments.length === 0) {
+    return {
+      totalValue: 0,
+      roi: 0,
+      performance: {
+        byCategory: {},
+        bestPerforming: "",
+        worstPerforming: "",
+      },
+      diversification: {
+        score: 0,
+        categories: 0,
+        recommendation: "Start investing to build a diversified portfolio",
+      },
+    };
+  }
 
+  // Calculate total value and ROI
+  const totalInvested = investments.reduce((sum, inv) => sum + inv.amount, 0);
+  const totalCurrentValue = investments.reduce(
+    (sum, inv) => sum + inv.currentValue,
+    0,
+  );
   const roi =
-    totalInvested > 0
-      ? ((totalValue - totalInvested) / totalInvested) * 100
-      : 0;
+    totalInvested > 0 ? (totalCurrentValue / totalInvested - 1) * 100 : 0;
 
-  // Performance by category
+  // Calculate performance by category
   const performanceByCategory: Record<string, number> = {};
-  const categoryCount: Record<string, number> = {};
-
   investments.forEach((inv) => {
-    const category = inv.category || "Unknown";
-    if (!performanceByCategory[category]) {
-      performanceByCategory[category] = 0;
-      categoryCount[category] = 0;
+    const category = inv.category;
+    const categoryRoi =
+      inv.amount > 0 ? (inv.currentValue / inv.amount - 1) * 100 : 0;
+
+    if (performanceByCategory[category]) {
+      performanceByCategory[category] =
+        (performanceByCategory[category] + categoryRoi) / 2;
+    } else {
+      performanceByCategory[category] = categoryRoi;
     }
-    const invROI =
-      inv.amount > 0 ? ((inv.currentValue - inv.amount) / inv.amount) * 100 : 0;
-    performanceByCategory[category] += invROI;
-    categoryCount[category]++;
   });
 
-  Object.keys(performanceByCategory).forEach((category) => {
-    performanceByCategory[category] /= categoryCount[category];
-  });
+  // Find best and worst performing categories
+  const sortedCategories = Object.entries(performanceByCategory).sort(
+    (a, b) => b[1] - a[1],
+  );
+  const bestPerforming = sortedCategories[0]?.[0] || "";
+  const worstPerforming =
+    sortedCategories[sortedCategories.length - 1]?.[0] || "";
 
-  // Diversification metrics
-  const uniqueCategories = Object.keys(categoryCount).length;
-  const diversificationScore = Math.min(uniqueCategories / 5, 1) * 100; // Max score at 5+ categories
+  // Calculate diversification
+  const uniqueCategories = new Set(investments.map((inv) => inv.category)).size;
+  const diversificationScore = Math.min((uniqueCategories / 5) * 100, 100);
+
+  let diversificationRecommendation = "";
+  if (diversificationScore >= 80) {
+    diversificationRecommendation = "Well diversified portfolio";
+  } else if (diversificationScore >= 60) {
+    diversificationRecommendation =
+      "Good diversification, consider adding more sectors";
+  } else {
+    diversificationRecommendation = "Consider diversifying across more sectors";
+  }
 
   return {
-    totalValue,
+    totalValue: totalCurrentValue,
     roi,
     performance: {
       byCategory: performanceByCategory,
-      bestPerforming:
-        Object.keys(performanceByCategory).length > 0
-          ? Object.keys(performanceByCategory).reduce((a, b) =>
-            performanceByCategory[a] > performanceByCategory[b] ? a : b,
-          )
-          : "None",
-      worstPerforming:
-        Object.keys(performanceByCategory).length > 0
-          ? Object.keys(performanceByCategory).reduce((a, b) =>
-            performanceByCategory[a] < performanceByCategory[b] ? a : b,
-          )
-          : "None",
+      bestPerforming,
+      worstPerforming,
     },
     diversification: {
       score: diversificationScore,
       categories: uniqueCategories,
-      recommendation:
-        uniqueCategories < 3
-          ? "Consider diversifying across more sectors"
-          : "Well diversified portfolio",
+      recommendation: diversificationRecommendation,
     },
   };
 }
 
-// Generate comprehensive platform analytics
-async function generatePlatformAnalytics(): Promise<PlatformAnalytics> {
-  const analytics: Partial<PlatformAnalytics> = {};
+// Get platform analytics (admin only)
+export const getPlatformAnalytics = onCall(async (request) => {
+  // Check if user is an admin
+  if (!request.auth || request.auth.token?.role !== "admin") {
+    throw new Error("Only admins can access platform analytics.");
+  }
 
   try {
-    // User statistics
+    // Get user statistics
     const usersQuery = await admin.firestore().collection("users").get();
-    const usersByRole: Record<string, number> = {};
-    let totalUsers = 0;
+    const users = usersQuery.docs.map((doc) => doc.data());
 
-    usersQuery.docs.forEach((doc) => {
-      const userData = doc.data();
-      const role = userData.role || "unknown";
+    const usersByRole: Record<string, number> = {};
+    users.forEach((user) => {
+      const role = user.role || "unknown";
       usersByRole[role] = (usersByRole[role] || 0) + 1;
-      totalUsers++;
     });
 
-    analytics.users = {
-      total: totalUsers,
-      byRole: usersByRole,
-    };
-
-    // Business ideas statistics
+    // Get business ideas statistics
     const businessIdeasQuery = await admin
       .firestore()
       .collection("businessIdeas")
       .get();
-    const ideasByCategory: Record<string, number> = {};
-    const ideasByStatus: Record<string, number> = {};
+    const businessIdeas = businessIdeasQuery.docs.map((doc) => doc.data());
 
-    businessIdeasQuery.docs.forEach((doc) => {
-      const ideaData = doc.data();
-      const category = ideaData.category || "unknown";
-      const status = ideaData.status || "unknown";
+    const businessIdeasByCategory: Record<string, number> = {};
+    const businessIdeasByStatus: Record<string, number> = {};
 
-      ideasByCategory[category] = (ideasByCategory[category] || 0) + 1;
-      ideasByStatus[status] = (ideasByStatus[status] || 0) + 1;
+    businessIdeas.forEach((idea) => {
+      const category = idea.category || "uncategorized";
+      const status = idea.status || "pending";
+
+      businessIdeasByCategory[category] =
+        (businessIdeasByCategory[category] || 0) + 1;
+      businessIdeasByStatus[status] = (businessIdeasByStatus[status] || 0) + 1;
     });
 
-    analytics.businessIdeas = {
-      total: businessIdeasQuery.size,
-      byCategory: ideasByCategory,
-      byStatus: ideasByStatus,
-    };
-
-    // Investment statistics
-    const proposalsQuery = await admin
+    // Get investment statistics
+    const investmentsQuery = await admin
       .firestore()
-      .collection("investmentProposals")
+      .collection("investments")
       .get();
+    const investments = investmentsQuery.docs.map((doc) => doc.data());
 
-    let totalInvestmentAmount = 0;
     const proposalsByStatus: Record<string, number> = {};
+    let totalFunded = 0;
+    let totalProposalAmount = 0;
 
-    proposalsQuery.docs.forEach((doc) => {
-      const proposalData = doc.data();
-      const status = proposalData.status || "unknown";
+    investments.forEach((investment) => {
+      const status = investment.status || "pending";
       proposalsByStatus[status] = (proposalsByStatus[status] || 0) + 1;
 
-      if (status === "accepted") {
-        totalInvestmentAmount += proposalData.amount || 0;
+      if (status === "funded") {
+        totalFunded += investment.amount || 0;
       }
+      totalProposalAmount += investment.amount || 0;
     });
 
-    analytics.investments = {
-      totalProposals: proposalsQuery.size,
-      totalFunded: totalInvestmentAmount,
-      proposalsByStatus: proposalsByStatus,
-      averageAmount:
-        proposalsQuery.size > 0
-          ? totalInvestmentAmount / (proposalsByStatus.accepted || 1)
-          : 0,
-    };
+    const averageAmount =
+      investments.length > 0 ? totalProposalAmount / investments.length : 0;
 
-    // Platform activity
+    // Get activity logs
     const logsQuery = await admin
       .firestore()
       .collection("logs")
@@ -587,65 +477,117 @@ async function generatePlatformAnalytics(): Promise<PlatformAnalytics> {
       .limit(1000)
       .get();
 
-    const activityByAction: Record<string, number> = {};
+    const recentActions: Record<string, number> = {};
     logsQuery.docs.forEach((doc) => {
-      const logData = doc.data();
-      const action = logData.action || "unknown";
-      activityByAction[action] = (activityByAction[action] || 0) + 1;
+      const log = doc.data();
+      const action = log.action || "unknown";
+      recentActions[action] = (recentActions[action] || 0) + 1;
     });
 
-    analytics.activity = {
-      recentActions: activityByAction,
-      totalLogs: logsQuery.size,
+    const analytics: PlatformAnalytics = {
+      users: {
+        total: users.length,
+        byRole: usersByRole,
+      },
+      businessIdeas: {
+        total: businessIdeas.length,
+        byCategory: businessIdeasByCategory,
+        byStatus: businessIdeasByStatus,
+      },
+      investments: {
+        totalProposals: investments.length,
+        totalFunded,
+        proposalsByStatus,
+        averageAmount,
+      },
+      activity: {
+        recentActions,
+        totalLogs: logsQuery.size,
+      },
     };
 
-    return analytics as PlatformAnalytics;
+    return analytics;
   } catch (error) {
-    console.error("Error generating platform analytics:", error);
-    throw error;
-  }
-}
-
-// Scheduled function to update all portfolio metrics daily
-export const dailyPortfolioUpdate = onSchedule("0 3 * * *", async (_event) => {
-  console.log("Running daily portfolio update");
-
-  try {
-    const portfoliosQuery = await admin
-      .firestore()
-      .collection("portfolios")
-      .get();
-
-    const updatePromises = portfoliosQuery.docs.map(async (doc) => {
-      const portfolio = doc.data();
-      const metrics = calculatePortfolioMetrics(portfolio.investments || []);
-
-      return admin.firestore().collection("portfolios").doc(doc.id).update({
-        totalValue: metrics.totalValue,
-        roi: metrics.roi,
-        performance: metrics.performance,
-        diversification: metrics.diversification,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    });
-
-    await Promise.all(updatePromises);
-
-    console.log(`Updated ${portfoliosQuery.size} portfolios`);
-
-    // Log the batch update
-    await admin
-      .firestore()
-      .collection("logs")
-      .add({
-        userId: "system",
-        action: "DAILY_PORTFOLIO_UPDATE",
-        data: {
-          portfoliosUpdated: portfoliosQuery.size,
-        },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
-  } catch (error) {
-    console.error("Error in daily portfolio update:", error);
+    console.error("Error getting platform analytics:", error);
+    throw new Error("Failed to get platform analytics.");
   }
 });
+
+// Scheduled function to update all portfolio metrics daily
+export const updateAllPortfolios = onSchedule(
+  "0 3 * * *", // Run daily at 3 AM
+  async () => {
+    try {
+      // Get all investors
+      const investorsQuery = await admin
+        .firestore()
+        .collection("users")
+        .where("role", "==", "investor")
+        .get();
+
+      const updatePromises = investorsQuery.docs.map(async (doc) => {
+        const investorId = doc.id;
+
+        try {
+          // Get all investments for this investor
+          const investmentsQuery = await admin
+            .firestore()
+            .collection("investments")
+            .where("investorId", "==", investorId)
+            .get();
+
+          const investments: Investment[] = investmentsQuery.docs.map(
+            (invDoc) =>
+              ({
+                id: invDoc.id,
+                ...invDoc.data(),
+              }) as Investment,
+          );
+
+          // Calculate and update portfolio metrics
+          const metrics = calculatePortfolioMetrics(investments);
+
+          await admin.firestore().collection("portfolios").doc(investorId).set(
+            {
+              userId: investorId,
+              investments,
+              totalValue: metrics.totalValue,
+              roi: metrics.roi,
+              performance: metrics.performance,
+              diversification: metrics.diversification,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+
+          console.log(`Updated portfolio for investor: ${investorId}`);
+        } catch (error) {
+          console.error(
+            `Error updating portfolio for investor ${investorId}:`,
+            error,
+          );
+        }
+      });
+
+      await Promise.allSettled(updatePromises);
+
+      // Log the batch update
+      await admin
+        .firestore()
+        .collection("logs")
+        .add({
+          userId: "system",
+          action: "PORTFOLIOS_BATCH_UPDATE",
+          data: {
+            investorCount: investorsQuery.size,
+            updatedAt: new Date().toISOString(),
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      console.log(`Updated ${investorsQuery.size} investor portfolios`);
+    } catch (error) {
+      console.error("Error in updateAllPortfolios:", error);
+    }
+  },
+);
