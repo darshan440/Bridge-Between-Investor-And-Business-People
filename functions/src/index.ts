@@ -38,7 +38,6 @@ import {
 } from "./notifications";
 import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
 import { onCall } from "firebase-functions/https";
-import { onSchedule } from "firebase-functions/v2/scheduler";
 
 // Authentication functions
 export { setUserRole };
@@ -83,6 +82,8 @@ export const dailyCleanup = onSchedule(
   },
   async () => {
     console.log("Running daily cleanup");
+    // Import cleanupOldNotifications here to avoid circular dependency
+    const { cleanupOldNotifications } = await import("./notifications");
     await cleanupOldNotifications();
   },
 );
