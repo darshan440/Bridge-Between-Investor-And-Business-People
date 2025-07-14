@@ -38,6 +38,7 @@ import {
 } from "./notifications";
 import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
 import { onCall } from "firebase-functions/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 
 // Authentication functions
 export { setUserRole };
@@ -73,14 +74,18 @@ export { sendNotification, sendBulkNotifications };
 // Analytics and automation functions
 export { generateRiskAssessment, updatePortfolioMetrics };
 
-export const dailyCleanup = functions.pubsub
-  .schedule("0 2 * * *") // Run daily at 2 AM
-  .timeZone("Asia/Kolkata")
-  .onRun(async (context) => {
+import { onSchedule } from "firebase-functions/v2/scheduler";
+
+export const dailyCleanup = onSchedule(
+  {
+    schedule: "0 2 * * *",
+    timeZone: "Asia/Kolkata",
+  },
+  async () => {
     console.log("Running daily cleanup");
     await cleanupOldNotifications();
-    return null;
-  });
+  },
+);
 
 // HTTP functions for external integrations
 export const webhookHandler = functions.https.onRequest(async (req, res) => {
