@@ -16,6 +16,7 @@ import {
   DocumentData,
   writeBatch,
   increment,
+  setDoc,
 } from "firebase/firestore";
 import { auth, db, COLLECTIONS } from "./firebase";
 import { logUserAction } from "./logging";

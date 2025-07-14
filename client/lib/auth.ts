@@ -1,31 +1,30 @@
 import {
+  IdTokenResult,
+  User,
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
-  User,
   updateProfile,
-  sendPasswordResetEmail,
-  onAuthStateChanged,
-  IdTokenResult,
 } from "firebase/auth";
 import {
   doc,
-  setDoc,
   getDoc,
-  updateDoc,
   serverTimestamp,
+  setDoc,
+  updateDoc,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import {
+  COLLECTIONS,
+  UserRole,
   auth,
   db,
-  storage,
   functions,
-  COLLECTIONS,
-  USER_ROLES,
-  UserRole,
   isFirebaseEnabled,
+  storage,
 } from "./firebase";
 import { logUserAction } from "./logging";
 
@@ -60,7 +59,6 @@ export interface UserProfile {
     website?: string;
     linkedIn?: string;
     isComplete?: boolean;
-    // Legacy fields for backward compatibility
     company?: string;
     location?: string;
     bio?: string;
@@ -130,9 +128,15 @@ export const registerUser = async (
 
     await setDoc(doc(db, COLLECTIONS.USERS, user.uid), userProfile);
     const ip = await getIP();
+    const userAgent = navigator.userAgent;
 
     // Log user registration
-    await logUserAction(user.uid, "USER_REGISTERED", { role, email }, { ip });
+    await logUserAction(
+      user.uid,
+      "USER_REGISTERED",
+      { role, email },
+      { ip, userAgent },
+    );
 
     return userProfile;
   } catch (error: any) {
@@ -177,7 +181,14 @@ export const signInUser = async (
     });
 
     // Log user sign in
-    await logUserAction(user.uid, "USER_SIGNED_IN", { email });
+    const userAgent = navigator.userAgent;
+    const ip = await getIP();
+    await logUserAction(
+      user.uid,
+      "USER_SIGNED_IN",
+      { email },
+      { ip, userAgent },
+    );
 
     return userProfile;
   } catch (error: any) {

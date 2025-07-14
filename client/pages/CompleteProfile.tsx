@@ -199,7 +199,7 @@ export default function CompleteProfile() {
               <CheckCircle className="w-5 h-5 text-blue-600" />
               <span className="text-blue-800 font-medium">Almost Done!</span>
             </div>
-          </div>
+          </div>  
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {getRoleTitle(userRole)}
           </h1>

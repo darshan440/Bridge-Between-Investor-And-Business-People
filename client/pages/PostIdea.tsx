@@ -35,7 +35,7 @@ export default function PostIdea() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Business idea submitted:", formData);
-    // Here you would typically send to backend
+    
   };
 
   const handleInputChange = (field: string, value: string) => {

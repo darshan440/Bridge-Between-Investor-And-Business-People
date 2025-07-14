@@ -4,9 +4,6 @@ import * as functions from "firebase-functions/v1";
 import { PromoteToAdminData } from "./types";
 import { FieldValue } from "firebase-admin/firestore";
 
-
-// Removed invalid import of CallableContext
-
 // Set custom claims for user role
 export const setUserRole = functions.https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
