@@ -419,10 +419,10 @@ export default function PostLoanSchemes() {
                   </div>
 
                   <div className="flex gap-4 pt-4">
-                    <Button type="submit" className="flex-1">
-                      Publish Loan Scheme
+                    <Button type="submit" className="flex-1" disabled={loading}>
+                      {loading ? "Publishing..." : "Publish Loan Scheme"}
                     </Button>
-                    <Button type="button" variant="outline">
+                    <Button type="button" variant="outline" disabled={loading}>
                       Save Draft
                     </Button>
                   </div>
