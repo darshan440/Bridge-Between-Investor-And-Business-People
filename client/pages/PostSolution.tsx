@@ -26,7 +26,10 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
+import { useToast } from "@/components/ui/use-toast";
 
 // Mock data for business queries
 const mockQueries = [
@@ -299,11 +302,13 @@ export default function PostSolution() {
                     <Button
                       type="submit"
                       className="flex-1"
-                      disabled={!selectedQuery || solution.length < 100}
+                      disabled={
+                        !selectedQuery || solution.length < 100 || loading
+                      }
                     >
-                      Submit Solution
+                      {loading ? "Submitting..." : "Submit Solution"}
                     </Button>
-                    <Button type="button" variant="outline">
+                    <Button type="button" variant="outline" disabled={loading}>
                       Save Draft
                     </Button>
                   </div>
