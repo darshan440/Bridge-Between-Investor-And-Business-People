@@ -83,13 +83,63 @@ const mockQueries = [
 export default function PostSolution() {
   const [selectedQuery, setSelectedQuery] = useState("");
   const [solution, setSolution] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Solution submitted:", { selectedQuery, solution });
-    // Here you would typically send to backend
-    setSolution("");
-    setSelectedQuery("");
+
+    if (!selectedQuery || !solution.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a query and provide a solution.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const postSolution = httpsCallable(functions, "postSolution");
+      const result = await postSolution({
+        queryId: selectedQuery,
+        solution: solution.trim(),
+      });
+
+      const data = result.data as {
+        success: boolean;
+        message: string;
+        solutionId: string;
+      };
+
+      if (data.success) {
+        toast({
+          title: "Success!",
+          description: data.message,
+          className: "bg-green-50 border-green-200",
+        });
+
+        // Reset form
+        setSolution("");
+        setSelectedQuery("");
+
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1500);
+      }
+    } catch (error: any) {
+      console.error("Error posting solution:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message || "Failed to post solution. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getPriorityColor = (priority: string) => {
