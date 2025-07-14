@@ -23,6 +23,111 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase";
 import { useToast } from "@/components/ui/use-toast";
 
+// Interactive CTA Button for Investors
+function InvestorCTAButton() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleInvestorCTA = async () => {
+    try {
+      // Check if user is logged in
+      const profile = await getCurrentUserProfile();
+
+      if (profile) {
+        // User is logged in, check/switch role and redirect
+        if (profile.role !== "investor") {
+          // Switch role to investor
+          const { changeUserRole } = await import("@/lib/auth");
+          await changeUserRole("investor");
+
+          toast({
+            title: "Role Updated",
+            description:
+              "You're now set as an investor. Redirecting to your dashboard...",
+            className: "bg-green-50 border-green-200",
+          });
+        }
+
+        // Redirect to investor dashboard
+        setTimeout(() => {
+          navigate("/dashboard", { state: { role: "investor" } });
+        }, 1000);
+      } else {
+        // User not logged in, redirect to auth with investor intent
+        navigate("/auth?role=investor&intent=invest");
+      }
+    } catch (error) {
+      console.error("Error handling investor CTA:", error);
+      // Fallback to auth page
+      navigate("/auth?role=investor&intent=invest");
+    }
+  };
+
+  return (
+    <Button
+      size="lg"
+      className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3"
+      onClick={handleInvestorCTA}
+    >
+      Start Investing
+      <TrendingUp className="ml-2 w-5 h-5" />
+    </Button>
+  );
+}
+
+// Interactive CTA Button for Business Persons
+function BusinessCTAButton() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleBusinessCTA = async () => {
+    try {
+      // Check if user is logged in
+      const profile = await getCurrentUserProfile();
+
+      if (profile) {
+        // User is logged in, check/switch role and redirect
+        if (profile.role !== "business_person") {
+          // Switch role to business_person
+          const { changeUserRole } = await import("@/lib/auth");
+          await changeUserRole("business_person");
+
+          toast({
+            title: "Role Updated",
+            description:
+              "You're now set as a business person. Redirecting to your dashboard...",
+            className: "bg-green-50 border-green-200",
+          });
+        }
+
+        // Redirect to business dashboard
+        setTimeout(() => {
+          navigate("/dashboard", { state: { role: "business_person" } });
+        }, 1000);
+      } else {
+        // User not logged in, redirect to auth with business intent
+        navigate("/auth?role=business_person&intent=share");
+      }
+    } catch (error) {
+      console.error("Error handling business CTA:", error);
+      // Fallback to auth page
+      navigate("/auth?role=business_person&intent=share");
+    }
+  };
+
+  return (
+    <Button
+      size="lg"
+      variant="outline"
+      className="text-lg px-8 py-3 border-blue-200 hover:bg-blue-50"
+      onClick={handleBusinessCTA}
+    >
+      Share Your Idea
+      <Target className="ml-2 w-5 h-5" />
+    </Button>
+  );
+}
+
 export default function Index() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
