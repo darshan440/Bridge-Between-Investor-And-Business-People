@@ -31,7 +31,10 @@ import {
   Building,
   Users,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
+import { useToast } from "@/components/ui/use-toast";
 
 // Mock data for existing loan schemes
 const mockLoanSchemes = [
@@ -93,10 +96,95 @@ export default function PostLoanSchemes() {
     processingTime: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Loan scheme submitted:", formData);
-    // Here you would typically send to backend
+
+    if (
+      !formData.schemeName ||
+      !formData.schemeType ||
+      !formData.minAmount ||
+      !formData.maxAmount ||
+      !formData.interestRateMin ||
+      !formData.description
+    ) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields (marked with *).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const postLoanScheme = httpsCallable(functions, "postLoanScheme");
+      const result = await postLoanScheme({
+        schemeName: formData.schemeName,
+        loanType: formData.schemeType,
+        minAmount: formData.minAmount,
+        maxAmount: formData.maxAmount,
+        interestRate: `${formData.interestRateMin}${formData.interestRateMax ? `-${formData.interestRateMax}` : ""}%`,
+        tenure: `${formData.tenureMin}${formData.tenureMax ? `-${formData.tenureMax}` : ""} years`,
+        description: formData.description,
+        eligibility: formData.eligibility,
+        features: formData.features,
+        collateralRequired: formData.collateralRequired,
+        processingFee: formData.processingFee,
+        processingTime: formData.processingTime,
+      });
+
+      const data = result.data as {
+        success: boolean;
+        message: string;
+        loanSchemeId: string;
+      };
+
+      if (data.success) {
+        toast({
+          title: "Success!",
+          description: data.message,
+          className: "bg-green-50 border-green-200",
+        });
+
+        // Reset form
+        setFormData({
+          schemeName: "",
+          schemeType: "",
+          minAmount: "",
+          maxAmount: "",
+          interestRateMin: "",
+          interestRateMax: "",
+          tenureMin: "",
+          tenureMax: "",
+          description: "",
+          eligibility: "",
+          documents: "",
+          features: [],
+          collateralRequired: false,
+          processingFee: "",
+          processingTime: "",
+        });
+
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1500);
+      }
+    } catch (error: any) {
+      console.error("Error posting loan scheme:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message || "Failed to post loan scheme. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
