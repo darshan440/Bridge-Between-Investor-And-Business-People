@@ -15,9 +15,13 @@ import {
   Target,
   Building,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DemoModeNotice from "@/components/DemoModeNotice";
 import { isFirebaseEnabled } from "@/lib/firebase";
+import { getCurrentUserProfile } from "@/lib/auth";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Index() {
   return (
@@ -41,7 +45,7 @@ export default function Index() {
                   Login
                 </Button>
               </Link>
-              <Link to="/auth">
+              <Link to="/auth?mode=signup">
                 <Button className="bg-blue-600 hover:bg-blue-700">
                   Get Started
                   <ArrowRight className="ml-2 w-4 h-4" />
@@ -67,25 +71,8 @@ export default function Index() {
             successful ventures with expert guidance and financial backing.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth">
-              <Button
-                size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-lg px-8 py-3"
-              >
-                Start Investing
-                <TrendingUp className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-            <Link to="/auth">
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-lg px-8 py-3 border-blue-200 hover:bg-blue-50"
-              >
-                Share Your Idea
-                <Target className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
+            <InvestorCTAButton />
+            <BusinessCTAButton />
           </div>
         </div>
       </section>
@@ -311,14 +298,20 @@ export default function Index() {
             <div>
               <h4 className="font-semibold mb-4">Contact</h4>
               <div className="space-y-2 text-gray-400">
-                <p>📧 hello@investbridge.in</p>
-                <p>📞 +91 99999 99999</p>
-                <p>📍 Mumbai, India</p>
+                <p>📧 darshanthakkar782@gmail.com</p>
+                <p>📞 7383791013</p>
+                <p>📍 Ahmedabad, Gujarat</p>
               </div>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             <p>&copy; 2024 InvestBridge. All rights reserved.</p>
+            <p className="mt-2 flex items-center justify-center">
+              ❤️ Made with love by{" "}
+              <span className="ml-1 font-semibold text-white">
+                Darshan Thakkar
+              </span>
+            </p>
           </div>
         </div>
       </footer>
