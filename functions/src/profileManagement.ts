@@ -1,170 +1,144 @@
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
-
+import { onCall } from "firebase-functions/v2/https";
 import { CompleteProfileData } from "./types";
 
-import * as functions from "firebase-functions"; // 1st Gen
 const db = getFirestore();
 
-export const completeUserProfile = functions.https.onCall(async (request) => {
-  try {
-    if (!request.auth?.uid) {
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "User must be authenticated",
-      );
-    }
-
-    const { profileData }: { profileData: CompleteProfileData } = request.data;
-    const userId = request.auth.uid;
-
-    if (!profileData) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Profile data is required",
-      );
-    }
-
-    // Validate required fields
-    if (!profileData.fullName?.trim()) {
-      throw new functions.https.HttpsError("invalid-argument", "Full name is required");
-    }
-
-    if (!profileData.mobileNumber?.trim()) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Mobile number is required",
-      );
-    }
-
-    // Validate mobile number format
-    const mobileRegex = /^\+?[\d\s-()]{10,}$/;
-    if (!mobileRegex.test(profileData.mobileNumber)) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Invalid mobile number format",
-      );
-    }
-
-    // Get current user profile
-    const userRef = db.collection("users").doc(userId);
-    const userDoc = await userRef.get();
-
-    if (!userDoc.exists) {
-      throw new functions.https.HttpsError("not-found", "User profile not found");
-    }
-
-    const currentProfile = userDoc.data();
-
-    // Check if role requires profile completion
-    const rolesRequiringCompletion = [
-      "business_person",
-      "investor",
-      "banker",
-      "business_advisor",
-    ];
-    if (!rolesRequiringCompletion.includes(currentProfile?.role)) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "Profile completion not required for this role",
-      );
-    }
-
-    // Update user profile
-    await userRef.update({
-      displayName: profileData.fullName,
-      isComplete: true,
-      profile: {
-        ...currentProfile?.profile,
-        ...profileData,
-        isComplete: true,
-      },
-      updatedAt: new Date(),
-    });
-
-    // Update Firebase Auth display name
-    try {
-      await getAuth().updateUser(userId, {
-        displayName: profileData.fullName,
-      });
-    } catch (authError) {
-      console.warn("Failed to update Auth display name:", authError);
-      // Don't fail the entire operation for auth update failure
-    }
-
-    // Log profile completion
-    await db.collection("logs").add({
-      userId,
-      action: "PROFILE_COMPLETED",
-      data: {
-        role: currentProfile?.role,
-        completedAt: new Date().toISOString(),
-      },
-      timestamp: new Date(),
-    });
-
-    return {
-      success: true,
-      message: "Profile completed successfully",
-    };
-  } catch (error) {
-    console.error("Profile completion error:", error);
-
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    }
-
-    throw new functions.https.HttpsError("internal", "Failed to complete profile");
-  }
-});
-
-// Get user profile completion status
-export const getProfileCompletionStatus = functions.https.onCall(
-  { cors: true },
+export const completeUserProfile = onCall<{ profileData: CompleteProfileData }>(
   async (request) => {
     try {
-      // Verify authentication
       if (!request.auth?.uid) {
-        throw new functions.https.HttpsError(
-          "unauthenticated",
-          "User must be authenticated",
-        );
+        throw new Error("User must be authenticated");
       }
 
+      const { profileData } = request.data;
       const userId = request.auth.uid;
 
-      // Get user profile
-      const userDoc = await db.collection("users").doc(userId).get();
-
-      if (!userDoc.exists) {
-        throw new functions.https.HttpsError("not-found", "User profile not found");
+      if (!profileData) {
+        throw new Error("Profile data is required");
       }
 
-      const profile = userDoc.data();
+      // Validate required fields
+      if (!profileData.fullName?.trim()) {
+        throw new Error("Full name is required");
+      }
+
+      if (!profileData.mobileNumber?.trim()) {
+        throw new Error("Mobile number is required");
+      }
+
+      // Validate mobile number format
+      const mobileRegex = /^\+?[\d\s-()]{10,}$/;
+      if (!mobileRegex.test(profileData.mobileNumber)) {
+        throw new Error("Invalid mobile number format");
+      }
+
+      // Get current user profile
+      const userRef = db.collection("users").doc(userId);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        throw new Error("User profile not found");
+      }
+
+      const currentProfile = userDoc.data();
+
+      // Check if role requires profile completion
       const rolesRequiringCompletion = [
         "business_person",
         "investor",
         "banker",
         "business_advisor",
       ];
-
-      return {
-        isComplete: profile?.isComplete === true,
-        requiresCompletion: rolesRequiringCompletion.includes(profile?.role),
-        role: profile?.role,
-        profile: profile?.profile || {},
-      };
-    } catch (error) {
-      console.error("Get profile status error:", error);
-
-      if (error instanceof functions.https.HttpsError) {
-        throw error;
+      if (!rolesRequiringCompletion.includes(currentProfile?.role)) {
+        throw new Error("Profile completion not required for this role");
       }
 
-      throw new functions.https.HttpsError("internal", "Failed to get profile status");
+      // Update user profile
+      await userRef.update({
+        displayName: profileData.fullName,
+        isComplete: true,
+        profile: {
+          ...currentProfile?.profile,
+          ...profileData,
+          isComplete: true,
+        },
+        updatedAt: new Date(),
+      });
+
+      // Update Firebase Auth display name
+      try {
+        await getAuth().updateUser(userId, {
+          displayName: profileData.fullName,
+        });
+      } catch (authError) {
+        console.warn("Failed to update Auth display name:", authError);
+        // Don't fail the entire operation for auth update failure
+      }
+
+      // Log profile completion
+      await db.collection("logs").add({
+        userId,
+        action: "PROFILE_COMPLETED",
+        data: {
+          role: currentProfile?.role,
+          completedAt: new Date().toISOString(),
+        },
+        timestamp: new Date(),
+      });
+
+      return {
+        success: true,
+        message: "Profile completed successfully",
+      };
+    } catch (error) {
+      console.error("Profile completion error:", error);
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to complete profile");
     }
   },
 );
+
+// Get user profile completion status
+export const getProfileCompletionStatus = onCall(async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth?.uid) {
+      throw new Error("User must be authenticated");
+    }
+
+    const userId = request.auth.uid;
+
+    // Get user profile
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+      throw new Error("User profile not found");
+    }
+
+    const profile = userDoc.data();
+    const rolesRequiringCompletion = [
+      "business_person",
+      "investor",
+      "banker",
+      "business_advisor",
+    ];
+
+    return {
+      isComplete: profile?.isComplete === true,
+      requiresCompletion: rolesRequiringCompletion.includes(profile?.role),
+      role: profile?.role,
+      profile: profile?.profile || {},
+    };
+  } catch (error) {
+    console.error("Get profile status error:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to get profile status");
+  }
+});
 
 // Validate profile data based on role
 export const validateProfileData = (
