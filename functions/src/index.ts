@@ -17,6 +17,13 @@ import {
   getProfileCompletionStatus,
 } from "./profileManagement";
 import {
+  postBusinessIdea,
+  postLoanScheme,
+  postSolution,
+  getBusinessIdeas,
+  getLoanSchemes,
+} from "./posts";
+import {
   onBusinessIdeaCreated,
   onInvestmentProposalCreated,
   onQueryCreated,
@@ -40,6 +47,15 @@ export { changeUserRole, getAvailableRoles, approveRoleChange };
 
 // Profile management functions
 export { completeUserProfile, getProfileCompletionStatus };
+
+// Posts management functions
+export {
+  postBusinessIdea,
+  postLoanScheme,
+  postSolution,
+  getBusinessIdeas,
+  getLoanSchemes,
+} from "./posts";
 
 // Firestore trigger functions
 export {
