@@ -18,7 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Lightbulb, DollarSign, Calendar, Tag } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/lib/firebase";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function PostIdea() {
   const [formData, setFormData] = useState({
@@ -31,11 +34,83 @@ export default function PostIdea() {
     revenue: "",
     team: "",
   });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Business idea submitted:", formData);
-    
+
+    if (
+      !formData.title ||
+      !formData.category ||
+      !formData.description ||
+      !formData.budget ||
+      !formData.timeline
+    ) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields (marked with *).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const postBusinessIdea = httpsCallable(functions, "postBusinessIdea");
+      const result = await postBusinessIdea({
+        title: formData.title,
+        category: formData.category,
+        description: formData.description,
+        budget: formData.budget,
+        timeline: formData.timeline,
+        targetMarket: formData.targetMarket,
+        revenue: formData.revenue,
+        team: formData.team,
+      });
+
+      const data = result.data as {
+        success: boolean;
+        message: string;
+        businessIdeaId: string;
+      };
+
+      if (data.success) {
+        toast({
+          title: "Success!",
+          description: data.message,
+          className: "bg-green-50 border-green-200",
+        });
+
+        // Reset form
+        setFormData({
+          title: "",
+          category: "",
+          description: "",
+          budget: "",
+          timeline: "",
+          targetMarket: "",
+          revenue: "",
+          team: "",
+        });
+
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1500);
+      }
+    } catch (error: any) {
+      console.error("Error posting business idea:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message || "Failed to post business idea. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -239,10 +314,10 @@ export default function PostIdea() {
                   </div>
 
                   <div className="flex gap-4 pt-4">
-                    <Button type="submit" className="flex-1">
-                      Submit Business Idea
+                    <Button type="submit" className="flex-1" disabled={loading}>
+                      {loading ? "Submitting..." : "Submit Business Idea"}
                     </Button>
-                    <Button type="button" variant="outline">
+                    <Button type="button" variant="outline" disabled={loading}>
                       Save Draft
                     </Button>
                   </div>
