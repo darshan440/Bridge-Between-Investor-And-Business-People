@@ -61,6 +61,11 @@ export const setUserRole = onCall<SetUserRoleData>(async (request) => {
 export const onUserCreated = beforeUserCreated(async (event) => {
   const user = event.data;
 
+  if (!user) {
+    console.error("No user data in event");
+    return;
+  }
+
   try {
     // Create user document in Firestore if it doesn't exist
     const userDoc = admin.firestore().collection("users").doc(user.uid);
@@ -69,13 +74,13 @@ export const onUserCreated = beforeUserCreated(async (event) => {
     if (!userSnapshot.exists) {
       await userDoc.set({
         uid: user.uid,
-        email: user.email,
+        email: user.email || "",
         displayName: user.displayName || "",
         photoURL: user.photoURL || "",
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
         isActive: true,
-        emailVerified: user.emailVerified,
+        emailVerified: user.emailVerified || false,
         lastLoginAt: FieldValue.serverTimestamp(),
       });
     }
@@ -106,7 +111,7 @@ export const onUserCreated = beforeUserCreated(async (event) => {
         userId: user.uid,
         action: "USER_CREATED_BY_AUTH",
         data: {
-          email: user.email,
+          email: user.email || "",
           provider: user.providerData?.[0]?.providerId ?? "email",
         },
         timestamp: FieldValue.serverTimestamp(),
