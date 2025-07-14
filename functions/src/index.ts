@@ -80,11 +80,45 @@ export const dailyCleanup = onSchedule(
     schedule: "0 2 * * *",
     timeZone: "Asia/Kolkata",
   },
-  async () => {
+  async (event) => {
     console.log("Running daily cleanup");
-    // Import cleanupOldNotifications here to avoid circular dependency
-    const { cleanupOldNotifications } = await import("./notifications");
-    await cleanupOldNotifications();
+    // Run cleanup directly here
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+      const batch = admin.firestore().batch();
+      const oldNotifications = await admin
+        .firestore()
+        .collection("notifications")
+        .where("createdAt", "<", cutoffDate)
+        .limit(500)
+        .get();
+
+      oldNotifications.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+
+      console.log(`Deleted ${oldNotifications.size} old notifications`);
+
+      // Log cleanup
+      await admin
+        .firestore()
+        .collection("logs")
+        .add({
+          userId: "system",
+          action: "NOTIFICATIONS_CLEANUP",
+          data: {
+            deletedCount: oldNotifications.size,
+            cutoffDate: cutoffDate.toISOString(),
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    } catch (error) {
+      console.error("Error cleaning up notifications:", error);
+    }
   },
 );
 
