@@ -552,11 +552,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For support and questions:
 
-- 📧 Email: support@investbridge.com
+- 📧 Email: darshanthakkar782@gmail.com
 - 💬 Discord: [Join our community](https://discord.gg/investbridge)
 - 📖 Documentation: [docs.investbridge.com](https://docs.investbridge.com)
 - 🐛 Issues: [GitHub Issues](https://github.com/your-username/investbridge/issues)
 
 ---
 
-**Built with ❤️ by the InvestBridge Team**
+**Built with ❤️ by the Darshan Thakkar**
