@@ -37,7 +37,7 @@ import {
   cleanupOldNotifications,
 } from "./notifications";
 import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
-import { onCall } from "firebase-functions/https";
+import { onCall } from "firebase-functions/v2/https";
 
 // Authentication functions
 export { setUserRole };

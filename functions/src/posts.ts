@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
 import { FieldValue } from "firebase-admin/firestore";
 
+
 const db = admin.firestore();
 
 // Interface definitions
@@ -14,6 +15,8 @@ interface BusinessIdeaData {
   targetMarket?: string;
   revenue?: string;
   team?: string;
+  createdAt?: any;
+  [key:string]:any
 }
 
 interface LoanSchemeData {

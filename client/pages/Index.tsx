@@ -19,8 +19,7 @@ import { Link, useNavigate } from "react-router-dom";
 import DemoModeNotice from "@/components/DemoModeNotice";
 import { isFirebaseEnabled } from "@/lib/firebase";
 import { getCurrentUserProfile } from "@/lib/auth";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "@/lib/firebase";
+
 import { useToast } from "@/components/ui/use-toast";
 
 // Interactive CTA Button for Investors

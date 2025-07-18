@@ -28,23 +28,24 @@ service cloud.firestore {
 
     // Users collection - users can read/write their own profile
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isOwner(userId);
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-    }
+  allow read: if request.auth != null && request.auth.uid == userId;
+  allow write: if request.auth != null && request.auth.uid == userId;
+  allow create: if request.auth != null && request.auth.uid == userId;
+}
+
 
     // Business Ideas collection
     match /businessIdeas/{ideaId} {
-      // Anyone authenticated can read published business ideas
-      allow read: if isAuthenticated() && resource.data.status == 'published';
-      // Only business persons can create ideas
-      allow create: if hasRole('business_person') && 
-                       request.auth.uid == request.resource.data.userId;
-      // Only the owner can update their ideas
-      allow update: if isOwner(resource.data.userId);
-      // Only the owner can delete their ideas
-      allow delete: if isOwner(resource.data.userId);
-    }
+  allow get: if isAuthenticated() && (
+    resource.data.status == 'published' || 
+    isOwner(resource.data.userId)
+  );
+  allow list: if isAuthenticated() && hasRole('business_person');
+  allow create: if hasRole('business_person') && 
+                   request.auth.uid == request.resource.data.userId;
+  allow update, delete: if isOwner(resource.data.userId);
+}
+
 
     // Investment Proposals collection
     match /investmentProposals/{proposalId} {

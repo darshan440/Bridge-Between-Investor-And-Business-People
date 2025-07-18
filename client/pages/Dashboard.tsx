@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { Notifications } from "@/components/Notifications";
+import { RoleChangeModal } from "@/components/RoleChangeModal";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,43 +10,94 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import {
-  Building,
-  User,
-  TrendingUp,
-  Lightbulb,
-  MessageSquare,
-  DollarSign,
-  FileText,
-  Users,
-  LogOut,
-  Menu,
-  X,
-  Settings,
-  AlertCircle,
-  CheckCircle,
-  BarChart3,
-  PieChart,
-  Target,
-  Clock,
-  Bell,
-} from "lucide-react";
 import { UserDashboard } from "@/components/UserDashboard";
-import { RoleChangeModal } from "@/components/RoleChangeModal";
-import { Notifications } from "@/components/Notifications";
 import { getCurrentUserProfile, isProfileCompletionRequired } from "@/lib/auth";
+import { db } from "@/lib/firebase";
 import {
   collection,
+  limit,
+  onSnapshot,
+  orderBy,
   query,
   where,
-  orderBy,
-  onSnapshot,
-  limit,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import {
+  AlertCircle,
+  BarChart3,
+  Building,
+  CheckCircle,
+  DollarSign,
+  FileText,
+  Lightbulb,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Settings,
+  Target,
+  TrendingUp,
+  User,
+  Users,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ClipLoader } from "react-spinners";
+type BusinessIdea = {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  budget: string;
+  timeline: string;
+  views: number;
+  interested: number;
+  status: string;
+  featured: boolean;
+  createdAt: any;
+  updatedAt: any;
+  [key: string]: any; // fallback for extra fields like `tags`, `teamInfo`, etc.
+};
+interface InvestmentProposal {
+  id: string;
+  businessIdeaId: string;
+  investorId: string;
+  investorName: string;
+  investorEmail: string;
+  message: string;
+  amount: number;
+  status: "active" | "panding" | "rejected";
+  createdAt: any;
+  [key: string]: any;
+}
+interface Solution {
+  id: string;
+  queryId: string;
+  advisorId: string;
+  solution: string;
+  helpful: number;
+  createdAt: any;
+  [key: string]: any;
+}
+interface LoanScheme {
+  id: string;
+  schemeName: string;
+  loanType: string;
+  minAmount: string;
+  maxAmount: string;
+  interestRate: string;
+  tenure: string;
+  description: string;
+  eligibility: string;
+  features: string[];
+  collateralRequired: boolean;
+  processingFee: string;
+  processingTime: string;
+  userId: string;
+  applications: number;
+  createdAt: any;
+  [key: string]: any;
+}
 
 const roleConfigs = {
   business_person: {
@@ -132,6 +185,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     // Get role from navigation state or localStorage
+
     const userRole =
       location.state?.role || localStorage.getItem("userRole") || "user";
     setRole(userRole);
@@ -158,6 +212,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    
     if (userProfile?.uid) {
       setupRealTimeData();
     }
@@ -195,7 +250,6 @@ export default function Dashboard() {
   };
 
   const setupBusinessPersonData = (unsubscribers: (() => void)[]) => {
-    // Listen to user's business ideas
     const businessIdeasRef = collection(db, "businessIdeas");
     const businessIdeasQuery = query(
       businessIdeasRef,
@@ -208,9 +262,9 @@ export default function Dashboard() {
       const ideas = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      }));
-
-      // Listen to investment proposals for user's ideas
+      })) as BusinessIdea[];
+      
+      // Still query proposals even if ideas is empty (user might have proposals)
       const proposalsRef = collection(db, "investmentProposals");
       const proposalsQuery = query(
         proposalsRef,
@@ -227,6 +281,7 @@ export default function Dashboard() {
             ...doc.data(),
           }));
 
+         
           setDashboardData({
             businessIdeas: ideas,
             proposals,
@@ -243,6 +298,7 @@ export default function Dashboard() {
               ),
             },
           });
+
           setLoading(false);
         },
       );
@@ -267,7 +323,7 @@ export default function Dashboard() {
       const investments = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      }));
+      })) as InvestmentProposal[];
 
       // Calculate portfolio metrics
       const totalInvested = investments.reduce(
@@ -337,7 +393,7 @@ export default function Dashboard() {
           const solutions = solutionsSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          }));
+          })) as Solution[];
 
           setDashboardData({
             openQueries: queries,
@@ -376,7 +432,7 @@ export default function Dashboard() {
       const schemes = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      }));
+      })) as LoanScheme[];
 
       setDashboardData({
         loanSchemes: schemes,
@@ -484,6 +540,7 @@ export default function Dashboard() {
 
   const renderBusinessPersonDashboard = () => (
     <div className="space-y-6">
+      
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -542,7 +599,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
       {/* Recent Business Ideas */}
       <Card>
         <CardHeader>
@@ -552,7 +608,14 @@ export default function Dashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {dashboardData.businessIdeas?.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <ClipLoader color="#4F46E5" size={50} />
+              <p className="mt-2 text-sm text-gray-600">
+                Loading your dashboard...
+              </p>
+            </div>
+          ) : dashboardData.businessIdeas?.length > 0 ? (
             <div className="space-y-4">
               {dashboardData.businessIdeas.map((idea: any) => (
                 <div
@@ -581,6 +644,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
+            // 👇 No data fallback
             <div className="text-center py-8">
               <Lightbulb className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
