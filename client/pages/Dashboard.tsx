@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getDummyDashboardData } from "@/lib/dummyData";
 // Loading component instead of react-spinners
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center">
