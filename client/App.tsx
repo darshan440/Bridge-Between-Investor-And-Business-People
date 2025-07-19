@@ -22,6 +22,7 @@ import Categories from "./pages/Categories";
 import Help from "./pages/Help";
 import CompleteProfile from "./pages/CompleteProfile";
 import Profile from "./pages/Profile";
+import MyInvestments from "./pages/MyInvestments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -56,8 +57,8 @@ const App = () => (
               <Route path="/query-panel" element={<QueryPanel />} />
               {/* Investor Routes */}
               <Route path="/view-proposals" element={<ViewProposals />} />
-              <Route path="/post-investment" element={<Dashboard />} />
-              <Route path="/portfolio" element={<Dashboard />} />
+              <Route path="/my-investments" element={<MyInvestments />} />
+              <Route path="/portfolio" element={<MyInvestments />} />
               {/* Business Advisor Routes */}
               <Route path="/post-advice" element={<Dashboard />} />
               <Route path="/view-queries" element={<Dashboard />} />
