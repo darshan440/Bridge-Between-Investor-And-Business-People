@@ -2,6 +2,10 @@ import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
 import { FieldValue } from "firebase-admin/firestore";
 
+// CORS configuration
+const corsOptions = {
+  cors: ["http://localhost:8080", "https://localhost:8080"],
+};
 
 const db = admin.firestore();
 
@@ -16,7 +20,7 @@ interface BusinessIdeaData {
   revenue?: string;
   team?: string;
   createdAt?: any;
-  [key:string]:any
+  [key: string]: any;
 }
 
 interface LoanSchemeData {
@@ -40,181 +44,132 @@ interface PostSolutionData {
 }
 
 // Post business idea
-export const postBusinessIdea = onCall<BusinessIdeaData>(async (request) => {
-  if (!request.auth) {
-    throw new Error("User must be authenticated to post business ideas.");
-  }
-
-  const {
-    title,
-    category,
-    description,
-    budget,
-    timeline,
-    targetMarket,
-    revenue,
-    team,
-  } = request.data;
-
-  // Validate required fields
-  if (!title?.trim()) {
-    throw new Error("Title is required.");
-  }
-  if (!category) {
-    throw new Error("Category is required.");
-  }
-  if (!description?.trim()) {
-    throw new Error("Description is required.");
-  }
-  if (!budget?.trim()) {
-    throw new Error("Budget is required.");
-  }
-  if (!timeline) {
-    throw new Error("Timeline is required.");
-  }
-
-  try {
-    // Get user profile for additional context
-    const userDoc = await db.collection("users").doc(request.auth.uid).get();
-    const userProfile = userDoc.data();
-
-    if (!userProfile) {
-      throw new Error("User profile not found.");
+export const postBusinessIdea = onCall<BusinessIdeaData>(
+  corsOptions,
+  async (request) => {
+    if (!request.auth) {
+      throw new Error("User must be authenticated to post business ideas.");
     }
 
-    // Create business idea document
-    const businessIdeaRef = await db.collection("businessIdeas").add({
-      userId: request.auth.uid,
-      authorName: userProfile.displayName || userProfile.profile?.fullName,
-      authorEmail: userProfile.email,
-      authorProfile: userProfile.isComplete
-        ? {
-            uid: request.auth.uid,
-            fullName: userProfile.profile?.fullName || userProfile.displayName,
-            email: userProfile.email,
-            role: userProfile.role,
-            mobileNumber: userProfile.profile?.mobileNumber,
-            companyName: userProfile.profile?.companyName,
-            designation: userProfile.profile?.designation,
-            isComplete: userProfile.isComplete,
-          }
-        : null,
+    const {
       title,
       category,
       description,
       budget,
       timeline,
-      targetMarket: targetMarket || "",
-      revenueModel: revenue || "",
-      teamInfo: team || "",
-      status: "active",
-      views: 0,
-      interested: 0,
-      featured: false,
-      tags: extractTags(description, category),
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+      targetMarket,
+      revenue,
+      team,
+    } = request.data;
 
-    // Log the action
-    await db.collection("logs").add({
-      userId: request.auth.uid,
-      action: "BUSINESS_IDEA_POSTED",
-      data: {
-        businessIdeaId: businessIdeaRef.id,
+    // Validate required fields
+    if (!title?.trim()) {
+      throw new Error("Title is required.");
+    }
+    if (!category) {
+      throw new Error("Category is required.");
+    }
+    if (!description?.trim()) {
+      throw new Error("Description is required.");
+    }
+    if (!budget?.trim()) {
+      throw new Error("Budget is required.");
+    }
+    if (!timeline) {
+      throw new Error("Timeline is required.");
+    }
+
+    try {
+      // Get user profile for additional context
+      const userDoc = await db.collection("users").doc(request.auth.uid).get();
+      const userProfile = userDoc.data();
+
+      if (!userProfile) {
+        throw new Error("User profile not found.");
+      }
+
+      // Create business idea document
+      const businessIdeaRef = await db.collection("businessIdeas").add({
+        userId: request.auth.uid,
+        authorName: userProfile.displayName || userProfile.profile?.fullName,
+        authorEmail: userProfile.email,
+        authorProfile: userProfile.isComplete
+          ? {
+              uid: request.auth.uid,
+              fullName:
+                userProfile.profile?.fullName || userProfile.displayName,
+              email: userProfile.email,
+              role: userProfile.role,
+              mobileNumber: userProfile.profile?.mobileNumber,
+              companyName: userProfile.profile?.companyName,
+              designation: userProfile.profile?.designation,
+              isComplete: userProfile.isComplete,
+            }
+          : null,
         title,
         category,
+        description,
         budget,
-      },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+        timeline,
+        targetMarket: targetMarket || "",
+        revenueModel: revenue || "",
+        teamInfo: team || "",
+        status: "active",
+        views: 0,
+        interested: 0,
+        featured: false,
+        tags: extractTags(description, category),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
-    // Send notification to potential investors
-    await notifyPotentialInvestors(businessIdeaRef.id, category, title);
+      // Log the action
+      await db.collection("logs").add({
+        userId: request.auth.uid,
+        action: "BUSINESS_IDEA_POSTED",
+        data: {
+          businessIdeaId: businessIdeaRef.id,
+          title,
+          category,
+          budget,
+        },
+        timestamp: FieldValue.serverTimestamp(),
+      });
 
-    return {
-      success: true,
-      businessIdeaId: businessIdeaRef.id,
-      message: "Business idea posted successfully!",
-    };
-  } catch (error) {
-    console.error("Error posting business idea:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to post business idea.");
-  }
-});
+      // Send notification to potential investors
+      await notifyPotentialInvestors(businessIdeaRef.id, category, title);
+
+      return {
+        success: true,
+        businessIdeaId: businessIdeaRef.id,
+        message: "Business idea posted successfully!",
+      };
+    } catch (error) {
+      console.error("Error posting business idea:", error);
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to post business idea.");
+    }
+  },
+);
 
 // Post loan scheme
-export const postLoanScheme = onCall<LoanSchemeData>(async (request) => {
-  if (!request.auth) {
-    throw new Error("User must be authenticated to post loan schemes.");
-  }
+export const postLoanScheme = onCall<LoanSchemeData>(
+  corsOptions,
+  async (request) => {
+    if (!request.auth) {
+      throw new Error("User must be authenticated to post loan schemes.");
+    }
 
-  // Check if user is a banker
-  const userDoc = await db.collection("users").doc(request.auth.uid).get();
-  const userProfile = userDoc.data();
+    // Check if user is a banker
+    const userDoc = await db.collection("users").doc(request.auth.uid).get();
+    const userProfile = userDoc.data();
 
-  if (!userProfile || userProfile.role !== "banker") {
-    throw new Error("Only bankers can post loan schemes.");
-  }
+    if (!userProfile || userProfile.role !== "banker") {
+      throw new Error("Only bankers can post loan schemes.");
+    }
 
-  const {
-    schemeName,
-    loanType,
-    minAmount,
-    maxAmount,
-    interestRate,
-    tenure,
-    description,
-    eligibility,
-    features,
-    collateralRequired,
-    processingFee,
-    processingTime,
-  } = request.data;
-
-  // Validate required fields
-  if (!schemeName?.trim()) {
-    throw new Error("Scheme name is required.");
-  }
-  if (!loanType) {
-    throw new Error("Loan type is required.");
-  }
-  if (!minAmount?.trim()) {
-    throw new Error("Minimum amount is required.");
-  }
-  if (!maxAmount?.trim()) {
-    throw new Error("Maximum amount is required.");
-  }
-  if (!interestRate?.trim()) {
-    throw new Error("Interest rate is required.");
-  }
-  if (!tenure?.trim()) {
-    throw new Error("Tenure is required.");
-  }
-  if (!description?.trim()) {
-    throw new Error("Description is required.");
-  }
-
-  try {
-    // Create loan scheme document
-    const loanSchemeRef = await db.collection("loanSchemes").add({
-      userId: request.auth.uid,
-      authorName: userProfile.displayName || userProfile.profile?.fullName,
-      authorEmail: userProfile.email,
-      authorProfile: userProfile.isComplete
-        ? {
-            uid: request.auth.uid,
-            fullName: userProfile.profile?.fullName || userProfile.displayName,
-            email: userProfile.email,
-            role: userProfile.role,
-            mobileNumber: userProfile.profile?.mobileNumber,
-            institutionName: userProfile.profile?.institutionName,
-            designation: userProfile.profile?.designation,
-            isComplete: userProfile.isComplete,
-          }
-        : null,
+    const {
       schemeName,
       loanType,
       minAmount,
@@ -222,46 +177,103 @@ export const postLoanScheme = onCall<LoanSchemeData>(async (request) => {
       interestRate,
       tenure,
       description,
-      eligibility: eligibility || "",
-      features: features || [],
+      eligibility,
+      features,
       collateralRequired,
-      processingFee: processingFee || "",
-      processingTime: processingTime || "",
-      status: "active",
-      applications: 0,
-      approvals: 0,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+      processingFee,
+      processingTime,
+    } = request.data;
 
-    // Log the action
-    await db.collection("logs").add({
-      userId: request.auth.uid,
-      action: "LOAN_SCHEME_POSTED",
-      data: {
-        loanSchemeId: loanSchemeRef.id,
+    // Validate required fields
+    if (!schemeName?.trim()) {
+      throw new Error("Scheme name is required.");
+    }
+    if (!loanType) {
+      throw new Error("Loan type is required.");
+    }
+    if (!minAmount?.trim()) {
+      throw new Error("Minimum amount is required.");
+    }
+    if (!maxAmount?.trim()) {
+      throw new Error("Maximum amount is required.");
+    }
+    if (!interestRate?.trim()) {
+      throw new Error("Interest rate is required.");
+    }
+    if (!tenure?.trim()) {
+      throw new Error("Tenure is required.");
+    }
+    if (!description?.trim()) {
+      throw new Error("Description is required.");
+    }
+
+    try {
+      // Create loan scheme document
+      const loanSchemeRef = await db.collection("loanSchemes").add({
+        userId: request.auth.uid,
+        authorName: userProfile.displayName || userProfile.profile?.fullName,
+        authorEmail: userProfile.email,
+        authorProfile: userProfile.isComplete
+          ? {
+              uid: request.auth.uid,
+              fullName:
+                userProfile.profile?.fullName || userProfile.displayName,
+              email: userProfile.email,
+              role: userProfile.role,
+              mobileNumber: userProfile.profile?.mobileNumber,
+              institutionName: userProfile.profile?.institutionName,
+              designation: userProfile.profile?.designation,
+              isComplete: userProfile.isComplete,
+            }
+          : null,
         schemeName,
         loanType,
+        minAmount,
+        maxAmount,
         interestRate,
-      },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+        tenure,
+        description,
+        eligibility: eligibility || "",
+        features: features || [],
+        collateralRequired,
+        processingFee: processingFee || "",
+        processingTime: processingTime || "",
+        status: "active",
+        applications: 0,
+        approvals: 0,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
-    // Notify business persons about new loan scheme
-    await notifyBusinessPersons(loanSchemeRef.id, schemeName, loanType);
+      // Log the action
+      await db.collection("logs").add({
+        userId: request.auth.uid,
+        action: "LOAN_SCHEME_POSTED",
+        data: {
+          loanSchemeId: loanSchemeRef.id,
+          schemeName,
+          loanType,
+          interestRate,
+        },
+        timestamp: FieldValue.serverTimestamp(),
+      });
 
-    return {
-      success: true,
-      loanSchemeId: loanSchemeRef.id,
-      message: "Loan scheme posted successfully!",
-    };
-  } catch (error) {
-    console.error("Error posting loan scheme:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to post loan scheme.");
-  }
-});
+      // Notify business persons about new loan scheme
+      await notifyBusinessPersons(loanSchemeRef.id, schemeName, loanType);
+
+      return {
+        success: true,
+        loanSchemeId: loanSchemeRef.id,
+        message: "Loan scheme posted successfully!",
+      };
+    } catch (error) {
+      console.error("Error posting loan scheme:", error);
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to post loan scheme.");
+    }
+  },
+);
 
 // Post solution to a query
 export const postSolution = onCall<PostSolutionData>(async (request) => {
