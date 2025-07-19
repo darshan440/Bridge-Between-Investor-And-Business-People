@@ -42,7 +42,12 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ClipLoader } from "react-spinners";
+// Loading component instead of react-spinners
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  </div>
+);
 type BusinessIdea = {
   id: string;
   title: string;
@@ -212,7 +217,6 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    
     if (userProfile?.uid) {
       setupRealTimeData();
     }
@@ -263,7 +267,7 @@ export default function Dashboard() {
         id: doc.id,
         ...doc.data(),
       })) as BusinessIdea[];
-      
+
       // Still query proposals even if ideas is empty (user might have proposals)
       const proposalsRef = collection(db, "investmentProposals");
       const proposalsQuery = query(
@@ -281,7 +285,6 @@ export default function Dashboard() {
             ...doc.data(),
           }));
 
-         
           setDashboardData({
             businessIdeas: ideas,
             proposals,
@@ -540,7 +543,6 @@ export default function Dashboard() {
 
   const renderBusinessPersonDashboard = () => (
     <div className="space-y-6">
-      
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -610,7 +612,7 @@ export default function Dashboard() {
         <CardContent>
           {loading ? (
             <div className="text-center py-8">
-              <ClipLoader color="#4F46E5" size={50} />
+              <LoadingSpinner />
               <p className="mt-2 text-sm text-gray-600">
                 Loading your dashboard...
               </p>
@@ -644,7 +646,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            // 👇 No data fallback
+            // ���� No data fallback
             <div className="text-center py-8">
               <Lightbulb className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
@@ -808,11 +810,17 @@ export default function Dashboard() {
               <p className="mt-1 text-sm text-gray-500">
                 Start investing in promising business ideas.
               </p>
-              <div className="mt-6">
+              <div className="mt-6 space-x-4">
                 <Link to="/view-proposals">
                   <Button>
                     <TrendingUp className="mr-2 h-4 w-4" />
                     Explore Opportunities
+                  </Button>
+                </Link>
+                <Link to="/my-investments">
+                  <Button variant="outline">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    My Portfolio
                   </Button>
                 </Link>
               </div>
