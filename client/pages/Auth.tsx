@@ -114,7 +114,18 @@ export default function Auth() {
             "investor",
             "business_advisor",
           ];
-          const restrictedRoles = ["banker", "admin"];
+          const restrictedRoles = ["admin"];
+
+          // Special logic for banker role - only allow if user is business_person or investor
+          if (formData.role === "banker") {
+            if (!["business_person", "investor"].includes(userProfile.role)) {
+              setError(
+                `❌ To become a banker, you must first be a business person or investor. Your current role is ${userProfile.role}. Please switch to business person or investor first.`,
+              );
+              setLoading(false);
+              return;
+            }
+          }
 
           if (restrictedRoles.includes(formData.role)) {
             setError(
@@ -420,9 +431,7 @@ export default function Auth() {
                     <SelectItem value={USER_ROLES.BUSINESS_ADVISOR}>
                       Business Advisor
                     </SelectItem>
-                    <SelectItem value={USER_ROLES.BANKER} disabled>
-                      Banker (Restricted)
-                    </SelectItem>
+                    <SelectItem value={USER_ROLES.BANKER}>Banker</SelectItem>
                   </SelectContent>
                 </Select>
                 {isLogin && formData.role && (
