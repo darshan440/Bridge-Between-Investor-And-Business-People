@@ -109,7 +109,7 @@ export default function CompleteProfile() {
   }
 
   // Users and admins don't need profile completion
-  if (userRole === "user" || userRole === "admin") {
+  if (userRole === "user" || "admin") {
     navigate("/dashboard");
     return null;
   }

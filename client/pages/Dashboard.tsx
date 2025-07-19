@@ -469,7 +469,7 @@ export default function Dashboard() {
         totalUsers: users.length,
         usersByRole,
         stats: {
-          totalBusinessIdeas: 0, // These would be fetched from actual collections
+          totalBusinessIdeas: 0, // These would be  from actual collections
           totalInvestments: 0,
           totalQueries: 0,
           platformActivity: 85, // Activity percentage
