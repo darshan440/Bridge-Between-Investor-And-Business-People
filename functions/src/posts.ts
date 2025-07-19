@@ -276,118 +276,122 @@ export const postLoanScheme = onCall<LoanSchemeData>(
 );
 
 // Post solution to a query
-export const postSolution = onCall<PostSolutionData>(async (request) => {
-  if (!request.auth) {
-    throw new Error("User must be authenticated to post solutions.");
-  }
-
-  // Check if user is a business advisor
-  const userDoc = await db.collection("users").doc(request.auth.uid).get();
-  const userProfile = userDoc.data();
-
-  if (!userProfile || userProfile.role !== "business_advisor") {
-    throw new Error("Only business advisors can post solutions.");
-  }
-
-  const { queryId, solution } = request.data;
-
-  // Validate required fields
-  if (!queryId?.trim()) {
-    throw new Error("Query ID is required.");
-  }
-  if (!solution?.trim()) {
-    throw new Error("Solution is required.");
-  }
-
-  try {
-    // Verify the query exists
-    const queryDoc = await db.collection("queries").doc(queryId).get();
-    if (!queryDoc.exists) {
-      throw new Error("Query not found.");
+export const postSolution = onCall<PostSolutionData>(
+  corsOptions,
+  async (request) => {
+    if (!request.auth) {
+      throw new Error("User must be authenticated to post solutions.");
     }
 
-    const queryData = queryDoc.data();
+    // Check if user is a business advisor
+    const userDoc = await db.collection("users").doc(request.auth.uid).get();
+    const userProfile = userDoc.data();
 
-    // Create solution document
-    const solutionRef = await db.collection("solutions").add({
-      queryId,
-      advisorId: request.auth.uid,
-      advisorName: userProfile.displayName || userProfile.profile?.fullName,
-      advisorEmail: userProfile.email,
-      advisorProfile: userProfile.isComplete
-        ? {
-            uid: request.auth.uid,
-            fullName: userProfile.profile?.fullName || userProfile.displayName,
-            email: userProfile.email,
-            role: userProfile.role,
-            mobileNumber: userProfile.profile?.mobileNumber,
-            institutionName: userProfile.profile?.institutionName,
-            designation: userProfile.profile?.designation,
-            isComplete: userProfile.isComplete,
-          }
-        : null,
-      solution,
-      status: "published",
-      likes: 0,
-      helpful: 0,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    if (!userProfile || userProfile.role !== "business_advisor") {
+      throw new Error("Only business advisors can post solutions.");
+    }
 
-    // Update query to mark as answered
-    await db
-      .collection("queries")
-      .doc(queryId)
-      .update({
-        status: "answered",
-        answeredAt: FieldValue.serverTimestamp(),
-        answeredBy: request.auth.uid,
-        solutionCount: FieldValue.increment(1),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
+    const { queryId, solution } = request.data;
 
-    // Log the action
-    await db.collection("logs").add({
-      userId: request.auth.uid,
-      action: "SOLUTION_POSTED",
-      data: {
+    // Validate required fields
+    if (!queryId?.trim()) {
+      throw new Error("Query ID is required.");
+    }
+    if (!solution?.trim()) {
+      throw new Error("Solution is required.");
+    }
+
+    try {
+      // Verify the query exists
+      const queryDoc = await db.collection("queries").doc(queryId).get();
+      if (!queryDoc.exists) {
+        throw new Error("Query not found.");
+      }
+
+      const queryData = queryDoc.data();
+
+      // Create solution document
+      const solutionRef = await db.collection("solutions").add({
         queryId,
-        solutionId: solutionRef.id,
-        queryTitle: queryData?.title,
-      },
-      timestamp: FieldValue.serverTimestamp(),
-    });
-
-    // Notify the query author about the new solution
-    if (queryData?.userId) {
-      await db.collection("notifications").add({
-        userId: queryData.userId,
-        title: "New Solution to Your Query",
-        body: `${userProfile.displayName || "A business advisor"} has provided a solution to your query: "${queryData.title}"`,
-        type: "SOLUTION_RECEIVED",
-        data: {
-          queryId,
-          solutionId: solutionRef.id,
-          advisorId: request.auth.uid,
-        },
-        read: false,
+        advisorId: request.auth.uid,
+        advisorName: userProfile.displayName || userProfile.profile?.fullName,
+        advisorEmail: userProfile.email,
+        advisorProfile: userProfile.isComplete
+          ? {
+              uid: request.auth.uid,
+              fullName:
+                userProfile.profile?.fullName || userProfile.displayName,
+              email: userProfile.email,
+              role: userProfile.role,
+              mobileNumber: userProfile.profile?.mobileNumber,
+              institutionName: userProfile.profile?.institutionName,
+              designation: userProfile.profile?.designation,
+              isComplete: userProfile.isComplete,
+            }
+          : null,
+        solution,
+        status: "published",
+        likes: 0,
+        helpful: 0,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
-    }
 
-    return {
-      success: true,
-      solutionId: solutionRef.id,
-      message: "Solution posted successfully!",
-    };
-  } catch (error) {
-    console.error("Error posting solution:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to post solution.");
-  }
-});
+      // Update query to mark as answered
+      await db
+        .collection("queries")
+        .doc(queryId)
+        .update({
+          status: "answered",
+          answeredAt: FieldValue.serverTimestamp(),
+          answeredBy: request.auth.uid,
+          solutionCount: FieldValue.increment(1),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+      // Log the action
+      await db.collection("logs").add({
+        userId: request.auth.uid,
+        action: "SOLUTION_POSTED",
+        data: {
+          queryId,
+          solutionId: solutionRef.id,
+          queryTitle: queryData?.title,
+        },
+        timestamp: FieldValue.serverTimestamp(),
+      });
+
+      // Notify the query author about the new solution
+      if (queryData?.userId) {
+        await db.collection("notifications").add({
+          userId: queryData.userId,
+          title: "New Solution to Your Query",
+          body: `${userProfile.displayName || "A business advisor"} has provided a solution to your query: "${queryData.title}"`,
+          type: "SOLUTION_RECEIVED",
+          data: {
+            queryId,
+            solutionId: solutionRef.id,
+            advisorId: request.auth.uid,
+          },
+          read: false,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+
+      return {
+        success: true,
+        solutionId: solutionRef.id,
+        message: "Solution posted successfully!",
+      };
+    } catch (error) {
+      console.error("Error posting solution:", error);
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to post solution.");
+    }
+  },
+);
 
 // Helper function to extract tags from description and category
 function extractTags(description: string, category: string): string[] {
