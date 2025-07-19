@@ -2,9 +2,9 @@ import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
 import { FieldValue } from "firebase-admin/firestore";
 
-// CORS configuration
+// CORS configuration for all environments
 const corsOptions = {
-  cors: ["http://localhost:8080", "https://localhost:8080"],
+  cors: true, // Allow all origins temporarily for testing
 };
 
 const db = admin.firestore();

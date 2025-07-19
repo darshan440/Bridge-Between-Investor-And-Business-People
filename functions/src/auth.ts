@@ -11,9 +11,9 @@ import {
 import { SetUserRoleData, PromoteToAdminData } from "./types";
 import { FieldValue } from "firebase-admin/firestore";
 
-// CORS configuration
+// CORS configuration for all environments
 const corsOptions = {
-  cors: ["http://localhost:8080", "https://localhost:8080"],
+  cors: true, // Allow all origins temporarily for testing
 };
 
 // Set custom claims for user role
