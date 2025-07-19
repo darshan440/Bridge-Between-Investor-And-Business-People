@@ -11,51 +11,59 @@ import {
 import { SetUserRoleData, PromoteToAdminData } from "./types";
 import { FieldValue } from "firebase-admin/firestore";
 
+// CORS configuration
+const corsOptions = {
+  cors: ["http://localhost:8080", "https://localhost:8080"],
+};
+
 // Set custom claims for user role
-export const setUserRole = onCall<SetUserRoleData>(async (request) => {
-  // Check if the user is authenticated
-  if (!request.auth) {
-    throw new Error("User must be authenticated to set role.");
-  }
+export const setUserRole = onCall<SetUserRoleData>(
+  corsOptions,
+  async (request) => {
+    // Check if the user is authenticated
+    if (!request.auth) {
+      throw new Error("User must be authenticated to set role.");
+    }
 
-  const { uid, role } = request.data;
+    const { uid, role } = request.data;
 
-  // Validate role
-  const validRoles = [
-    "user",
-    "business_person",
-    "investor",
-    "banker",
-    "business_advisor",
-  ];
+    // Validate role
+    const validRoles = [
+      "user",
+      "business_person",
+      "investor",
+      "banker",
+      "business_advisor",
+    ];
 
-  if (!validRoles.includes(role)) {
-    throw new Error("Invalid role specified.");
-  }
+    if (!validRoles.includes(role)) {
+      throw new Error("Invalid role specified.");
+    }
 
-  // Only allow users to set their own role during registration
-  if (request.auth.uid !== uid) {
-    throw new Error("Users can only set their own role.");
-  }
+    // Only allow users to set their own role during registration
+    if (request.auth.uid !== uid) {
+      throw new Error("Users can only set their own role.");
+    }
 
-  try {
-    // Set custom claims
-    await admin.auth().setCustomUserClaims(uid, { role });
+    try {
+      // Set custom claims
+      await admin.auth().setCustomUserClaims(uid, { role });
 
-    // Log the role assignment
-    await admin.firestore().collection("logs").add({
-      userId: uid,
-      action: "ROLE_ASSIGNED",
-      data: { role },
-      timestamp: FieldValue.serverTimestamp(),
-    });
+      // Log the role assignment
+      await admin.firestore().collection("logs").add({
+        userId: uid,
+        action: "ROLE_ASSIGNED",
+        data: { role },
+        timestamp: FieldValue.serverTimestamp(),
+      });
 
-    return { success: true, role };
-  } catch (error) {
-    console.error("Error setting user role:", error);
-    throw new Error("Failed to set user role.");
-  }
-});
+      return { success: true, role };
+    } catch (error) {
+      console.error("Error setting user role:", error);
+      throw new Error("Failed to set user role.");
+    }
+  },
+);
 
 // Trigger when a new user is created
 export const onUserCreated = beforeUserCreated(async (event) => {
