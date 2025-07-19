@@ -30,6 +30,7 @@ const LoadingSpinner = () => (
 );
 import { useAuth } from "@/lib/AuthContext";
 import { db } from "@/lib/firebase";
+import { getDummyDashboardData } from "@/lib/dummyData";
 import {
   collection,
   query,
@@ -96,8 +97,17 @@ const MyInvestments: React.FC = () => {
         ...doc.data(),
       })) as Investment[];
 
-      setInvestments(investmentsList);
-      calculateMetrics(investmentsList);
+      // Use dummy data if no real data is available
+      if (investmentsList.length === 0) {
+        const dummyData = getDummyDashboardData("investor");
+        const dummyInvestments = dummyData.investments || [];
+        setInvestments(dummyInvestments);
+        calculateMetrics(dummyInvestments);
+      } else {
+        setInvestments(investmentsList);
+        calculateMetrics(investmentsList);
+      }
+
       setLoading(false);
     });
 
