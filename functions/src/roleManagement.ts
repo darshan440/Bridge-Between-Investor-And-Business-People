@@ -2,6 +2,11 @@ import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
 import { ChangeUserRoleData } from "./types";
 
+// CORS configuration
+const corsOptions = {
+  cors: ["http://localhost:8080", "https://localhost:8080"],
+};
+
 // Role configuration - ideally this would be loaded from Firestore or a config service
 const roleConfig = {
   roleMatrix: {
