@@ -22,7 +22,12 @@ import {
   Calendar,
   Building,
 } from "lucide-react";
-import { ClipLoader } from "react-spinners";
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  </div>
+);
 import { useAuth } from "@/lib/AuthContext";
 import { db } from "@/lib/firebase";
 import {
@@ -171,7 +176,7 @@ const MyInvestments: React.FC = () => {
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-16">
-            <ClipLoader color="#4F46E5" size={50} />
+            <LoadingSpinner />
             <p className="mt-4 text-gray-600">Loading your investments...</p>
           </div>
         </div>
