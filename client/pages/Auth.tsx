@@ -189,29 +189,53 @@ export default function Auth() {
       } else {
         console.error("Authentication error:", error);
 
-        // Handle specific Firebase auth errors
+        // Handle specific Firebase auth errors with user-friendly messages
+        const friendlyErrorMessages: Record<string, string> = {
+          "auth/email-already-in-use":
+            "This email is already registered. Please try logging in instead.",
+          "auth/invalid-credential":
+            "The email or password you entered is incorrect. Please check and try again.",
+          "auth/wrong-password":
+            "The password you entered is incorrect. Please try again or reset your password.",
+          "auth/user-not-found":
+            "No account found with this email. Please check the email or create a new account.",
+          "auth/weak-password":
+            "Password must be at least 6 characters long. Please choose a stronger password.",
+          "auth/invalid-email":
+            "Please enter a valid email address (e.g., name@example.com).",
+          "auth/too-many-requests":
+            "Too many failed login attempts. Please wait a few minutes before trying again.",
+          "auth/user-disabled":
+            "This account has been disabled. Please contact support for assistance.",
+          "auth/operation-not-allowed":
+            "This sign-in method is not enabled. Please contact support.",
+          "auth/network-request-failed":
+            "Network error. Please check your internet connection and try again.",
+          "auth/popup-closed-by-user":
+            "Sign-in was cancelled. Please try again.",
+          "auth/cancelled-popup-request":
+            "Only one sign-in popup can be open at a time.",
+          "auth/popup-blocked":
+            "Popup was blocked by your browser. Please allow popups for this site.",
+          internal: "A server error occurred. Please try again later.",
+          "permission-denied":
+            "You don't have permission to perform this action.",
+          "not-found": "The requested resource was not found.",
+          unauthenticated: "Please log in to continue.",
+        };
+
+        const userFriendlyMessage =
+          friendlyErrorMessages[error.code] ||
+          friendlyErrorMessages[error.message] ||
+          `Something went wrong: ${error.message || "Please try again."}`;
+
         if (error.code === "auth/email-already-in-use") {
           setIsLogin(true);
-          setError(
-            "Email already registered. Switched to login mode. Please try logging in.",
-          );
-        } else if (
-          error.code === "auth/invalid-credential" ||
-          error.code === "auth/wrong-password"
-        ) {
-          setError("Invalid email or password. Please check your credentials.");
         } else if (error.code === "auth/user-not-found") {
           setIsLogin(false);
-          setError("Account not found. Switched to registration mode.");
-        } else if (error.code === "auth/weak-password") {
-          setError("Password should be at least 6 characters long.");
-        } else if (error.code === "auth/invalid-email") {
-          setError("Please enter a valid email address.");
-        } else if (error.code === "auth/too-many-requests") {
-          setError("Too many failed attempts. Please try again later.");
-        } else {
-          setError(error.message || "Authentication failed. Please try again.");
         }
+
+        setError(userFriendlyMessage);
       }
     } finally {
       setLoading(false);
