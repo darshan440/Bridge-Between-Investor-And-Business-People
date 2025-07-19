@@ -513,7 +513,7 @@ export const getBusinessIdeas = onCall<{
   search?: string;
   limit?: number;
   lastVisible?: string;
-}>(async (request) => {
+}>(corsOptions, async (request) => {
   const { category, search, limit = 20, lastVisible } = request.data;
 
   try {
@@ -576,7 +576,7 @@ export const getLoanSchemes = onCall<{
   loanType?: string;
   search?: string;
   limit?: number;
-}>(async (request) => {
+}>(corsOptions, async (request) => {
   const { loanType, search, limit = 20 } = request.data;
 
   try {
