@@ -286,22 +286,31 @@ export default function Dashboard() {
             ...doc.data(),
           }));
 
-          setDashboardData({
-            businessIdeas: ideas,
-            proposals,
-            stats: {
-              totalIdeas: ideas.length,
-              totalProposals: proposals.length,
-              totalViews: ideas.reduce(
-                (sum, idea) => sum + (idea.views || 0),
-                0,
-              ),
-              totalInterested: ideas.reduce(
-                (sum, idea) => sum + (idea.interested || 0),
-                0,
-              ),
-            },
-          });
+          // Use dummy data if no real data is available
+          const hasRealData = ideas.length > 0 || proposals.length > 0;
+
+          if (hasRealData) {
+            setDashboardData({
+              businessIdeas: ideas,
+              proposals,
+              stats: {
+                totalIdeas: ideas.length,
+                totalProposals: proposals.length,
+                totalViews: ideas.reduce(
+                  (sum, idea) => sum + (idea.views || 0),
+                  0,
+                ),
+                totalInterested: ideas.reduce(
+                  (sum, idea) => sum + (idea.interested || 0),
+                  0,
+                ),
+              },
+            });
+          } else {
+            // Use dummy data for demonstration
+            const dummyData = getDummyDashboardData("business_person");
+            setDashboardData(dummyData);
+          }
 
           setLoading(false);
         },
@@ -343,23 +352,32 @@ export default function Dashboard() {
           ? ((totalValue - totalInvested) / totalInvested) * 100
           : 0;
 
-      setDashboardData({
-        investments,
-        portfolio: {
-          totalInvested,
-          totalValue,
-          roi,
-          activeInvestments: investments.filter(
-            (inv) => inv.status === "active",
-          ).length,
-        },
-        stats: {
-          totalInvestments: investments.length,
-          totalAmount: totalInvested,
-          averageROI: roi,
-          bestPerforming: investments[0]?.businessIdeaTitle || "None",
-        },
-      });
+      // Use dummy data if no real data is available
+      const hasRealData = investments.length > 0;
+
+      if (hasRealData) {
+        setDashboardData({
+          investments,
+          portfolio: {
+            totalInvested,
+            totalValue,
+            roi,
+            activeInvestments: investments.filter(
+              (inv) => inv.status === "active",
+            ).length,
+          },
+          stats: {
+            totalInvestments: investments.length,
+            totalAmount: totalInvested,
+            averageROI: roi,
+            bestPerforming: investments[0]?.businessIdeaTitle || "None",
+          },
+        });
+      } else {
+        // Use dummy data for demonstration
+        const dummyData = getDummyDashboardData("investor");
+        setDashboardData(dummyData);
+      }
       setLoading(false);
     });
 
@@ -399,19 +417,28 @@ export default function Dashboard() {
             ...doc.data(),
           })) as Solution[];
 
-          setDashboardData({
-            openQueries: queries,
-            mySolutions: solutions,
-            stats: {
-              totalSolutions: solutions.length,
-              totalQueries: queries.length,
-              helpfulVotes: solutions.reduce(
-                (sum, sol) => sum + (sol.helpful || 0),
-                0,
-              ),
-              averageRating: 4.5, // This would be calculated from actual ratings
-            },
-          });
+          // Use dummy data if no real data is available
+          const hasRealData = queries.length > 0 || solutions.length > 0;
+
+          if (hasRealData) {
+            setDashboardData({
+              openQueries: queries,
+              mySolutions: solutions,
+              stats: {
+                totalSolutions: solutions.length,
+                totalQueries: queries.length,
+                helpfulVotes: solutions.reduce(
+                  (sum, sol) => sum + (sol.helpful || 0),
+                  0,
+                ),
+                averageRating: 4.5, // This would be calculated from actual ratings
+              },
+            });
+          } else {
+            // Use dummy data for demonstration
+            const dummyData = getDummyDashboardData("business_advisor");
+            setDashboardData(dummyData);
+          }
           setLoading(false);
         },
       );
@@ -438,18 +465,27 @@ export default function Dashboard() {
         ...doc.data(),
       })) as LoanScheme[];
 
-      setDashboardData({
-        loanSchemes: schemes,
-        stats: {
-          totalSchemes: schemes.length,
-          totalApplications: schemes.reduce(
-            (sum, scheme) => sum + (scheme.applications || 0),
-            0,
-          ),
-          approvalRate: 75, // This would be calculated from actual data
-          averageAmount: schemes.length > 0 ? 5000000 : 0, // Average loan amount
-        },
-      });
+      // Use dummy data if no real data is available
+      const hasRealData = schemes.length > 0;
+
+      if (hasRealData) {
+        setDashboardData({
+          loanSchemes: schemes,
+          stats: {
+            totalSchemes: schemes.length,
+            totalApplications: schemes.reduce(
+              (sum, scheme) => sum + (scheme.applications || 0),
+              0,
+            ),
+            approvalRate: 75, // This would be calculated from actual data
+            averageAmount: schemes.length > 0 ? 5000000 : 0, // Average loan amount
+          },
+        });
+      } else {
+        // Use dummy data for demonstration
+        const dummyData = getDummyDashboardData("banker");
+        setDashboardData(dummyData);
+      }
       setLoading(false);
     });
 
@@ -469,16 +505,25 @@ export default function Dashboard() {
         {} as Record<string, number>,
       );
 
-      setDashboardData({
-        totalUsers: users.length,
-        usersByRole,
-        stats: {
-          totalBusinessIdeas: 0, // These would be  from actual collections
-          totalInvestments: 0,
-          totalQueries: 0,
-          platformActivity: 85, // Activity percentage
-        },
-      });
+      // Use dummy data if no real data is available
+      const hasRealData = users.length > 0;
+
+      if (hasRealData) {
+        setDashboardData({
+          totalUsers: users.length,
+          usersByRole,
+          stats: {
+            totalBusinessIdeas: 0, // These would be from actual collections
+            totalInvestments: 0,
+            totalQueries: 0,
+            platformActivity: 85, // Activity percentage
+          },
+        });
+      } else {
+        // Use dummy data for demonstration
+        const dummyData = getDummyDashboardData("admin");
+        setDashboardData(dummyData);
+      }
       setLoading(false);
     });
 
