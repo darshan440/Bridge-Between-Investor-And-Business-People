@@ -1,0 +1,3 @@
+not just error handling... this is user flow quality control. 
+
+prfile company name error handling is pandding

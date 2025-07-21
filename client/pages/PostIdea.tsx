@@ -1,8 +1,4 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -10,6 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -17,11 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Lightbulb, DollarSign, Calendar, Tag } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "@/lib/firebase";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { functions } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { ArrowLeft, DollarSign, Lightbulb, Tag } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function PostIdea() {
   const [formData, setFormData] = useState({
@@ -59,6 +59,7 @@ export default function PostIdea() {
     setLoading(true);
     try {
       const postBusinessIdea = httpsCallable(functions, "postBusinessIdea");
+
       const result = await postBusinessIdea({
         title: formData.title,
         category: formData.category,
@@ -101,15 +102,28 @@ export default function PostIdea() {
         }, 1500);
       }
     } catch (error: any) {
-      console.error("Error posting business idea:", error);
-      toast({
-        title: "Error",
-        description:
-          error.message || "Failed to post business idea. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      if (error.message?.trim() === "failed-precondition") {
+        toast({
+          title: "Incomplete Profile",
+          description:
+            "To post a business idea, your profile must include your company name. Please update your profile before proceeding.",
+          variant: "destructive",
+          action: (
+            <Button variant="outline" onClick={() => navigate("/profile")}>
+              Go to My Profile
+            </Button>
+          ),
+        });
+      } else {
+        toast({
+          title: "Error",
+          description:
+            error.message?.trim() ||
+            "Failed to post business idea. Please try again.",
+          variant: "destructive",
+        });
+      }
+      console.error("Error posting business idea:", error.message || error);
     }
   };
 

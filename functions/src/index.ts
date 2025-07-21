@@ -6,69 +6,70 @@ import * as functions from "firebase-functions/v1";
 admin.initializeApp();
 
 // Import function modules
+import { onCall } from "firebase-functions/v2/https";
+import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
 import { setUserRole } from "./auth";
 import {
-  changeUserRole,
-  getAvailableRoles,
-  approveRoleChange,
-} from "./roleManagement";
+  cleanupOldNotifications,
+  getUserNotifications,
+  markNotificationAsRead,
+  sendBulkNotifications,
+  sendNotification,
+} from "./notifications";
 import {
   completeUserProfile,
   getProfileCompletionStatus,
 } from "./profileManagement";
 import {
-  postBusinessIdea,
-  postLoanScheme,
-  postSolution,
-  getBusinessIdeas,
-  getLoanSchemes,
-} from "./posts";
+  approveRoleChange,
+  changeUserRole,
+  getAvailableRoles,
+} from "./roleManagement";
 import {
+  onAdvisorSuggestionCreated,
   onBusinessIdeaCreated,
   onInvestmentProposalCreated,
+  onLoanSchemeCreated,
   onQueryCreated,
   onResponseCreated,
-  onAdvisorSuggestionCreated,
-  onLoanSchemeCreated,
 } from "./triggers";
-import {
-  sendNotification,
-  sendBulkNotifications,
-  cleanupOldNotifications,
-} from "./notifications";
-import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
-import { onCall } from "firebase-functions/v2/https";
 
 // Authentication functions
 export { setUserRole };
 
 // Role management functions
-export { changeUserRole, getAvailableRoles, approveRoleChange };
+export { approveRoleChange, changeUserRole, getAvailableRoles };
 
 // Profile management functions
 export { completeUserProfile, getProfileCompletionStatus };
 
 // Posts management functions
 export {
+  getBusinessIdeas,
+  getLoanSchemes,
   postBusinessIdea,
   postLoanScheme,
   postSolution,
-  getBusinessIdeas,
-  getLoanSchemes,
 } from "./posts";
 
 // Firestore trigger functions
 export {
+  onAdvisorSuggestionCreated,
   onBusinessIdeaCreated,
   onInvestmentProposalCreated,
+  onLoanSchemeCreated,
   onQueryCreated,
   onResponseCreated,
-  onAdvisorSuggestionCreated,
-  onLoanSchemeCreated,
 };
 
 // Notification functions
-export { sendNotification, sendBulkNotifications };
+export {
+  cleanupOldNotifications,
+  getUserNotifications,
+  markNotificationAsRead,
+  sendBulkNotifications,
+  sendNotification,
+} from "./notifications";
 
 // Analytics and automation functions
 export { generateRiskAssessment, updatePortfolioMetrics };

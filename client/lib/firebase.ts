@@ -176,6 +176,6 @@ export const USER_ROLES = {
 } as const;
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
-setLogLevel("debug");
+
 // Export app for use in other files
 export default app;

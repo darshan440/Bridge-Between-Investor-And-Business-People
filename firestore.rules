@@ -49,13 +49,17 @@ service cloud.firestore {
 
     // Investment Proposals collection
     match /investmentProposals/{proposalId} {
+
       // Investors and business owners (of the target idea) can read proposals
       allow read: if hasRole('investor') || hasRole('business_person');
+
       // Only investors can create proposals
       allow create: if hasRole('investor') && 
                        request.auth.uid == request.resource.data.investorId;
+
       // Only the investor who created it can update
       allow update: if isOwner(resource.data.investorId);
+      
       // Only the investor who created it can delete
       allow delete: if isOwner(resource.data.investorId);
     }
