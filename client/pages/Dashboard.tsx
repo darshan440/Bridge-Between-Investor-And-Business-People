@@ -685,9 +685,11 @@ export default function Dashboard() {
                       </span>
                     </div>
                   </div>
-                  <Button size="sm" variant="outline">
-                    View Details
-                  </Button>
+                  <Link to={`/idea/${idea.id}`}>
+                    <Button size="sm" variant="outline">
+                      View Details
+                    </Button>
+                  </Link>
                 </div>
               ))}
             </div>
