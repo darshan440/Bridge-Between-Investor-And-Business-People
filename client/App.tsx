@@ -1,6 +1,13 @@
 import "./global.css";
 
 import { Toaster } from "@/components/ui/toaster";
+
+// Extend HTMLElement to include _reactRootContainer property
+declare global {
+  interface HTMLElement {
+    _reactRootContainer?: any;
+  }
+}
 import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
