@@ -185,3 +185,18 @@ try {
   console.error("❌ Error rendering App:", error);
   throw error;
 }
+
+// Hot reload cleanup for development
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (container._reactRootContainer) {
+      console.log("🔄 Cleaning up React root for hot reload");
+      try {
+        container._reactRootContainer.unmount();
+      } catch (error) {
+        console.warn("Warning during root cleanup:", error);
+      }
+      delete container._reactRootContainer;
+    }
+  });
+}
