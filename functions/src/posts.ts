@@ -137,7 +137,12 @@ export const postBusinessIdea = onCall<BusinessIdeaData>(async (request) => {
     });
 
     // Send notification to potential investors
-    await notifyPotentialInvestors(businessIdeaRef.id, title, category, userProfile.displayName || "Anonymous");
+    await notifyPotentialInvestors(
+      businessIdeaRef.id,
+      title,
+      category,
+      userProfile.displayName || "Anonymous",
+    );
 
     return {
       success: true,

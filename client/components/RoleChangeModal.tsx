@@ -168,7 +168,8 @@ export function RoleChangeModal({
             <span>Change Your Role</span>
           </DialogTitle>
           <DialogDescription>
-            Switch to a different role to access new features and capabilities. Contact an administrator if your role is restricted.
+            Switch to a different role to access new features and capabilities.
+            Contact an administrator if your role is restricted.
           </DialogDescription>
         </DialogHeader>
 

@@ -70,7 +70,7 @@ const ViewIdeaDetails: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [idea, setIdea] = useState<BusinessIdea | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -95,7 +95,7 @@ const ViewIdeaDetails: React.FC = () => {
 
   const timelines = [
     "1-3 months",
-    "3-6 months", 
+    "3-6 months",
     "6-12 months",
     "1-2 years",
     "2+ years",
@@ -114,11 +114,11 @@ const ViewIdeaDetails: React.FC = () => {
         const ideaData = { id: ideaDoc.id, ...ideaDoc.data() } as BusinessIdea;
         setIdea(ideaData);
         setFormData(ideaData);
-        
+
         // Increment view count if not the owner
         if (user?.uid !== ideaData.userId) {
           await updateDoc(doc(db, "businessIdeas", id!), {
-            views: (ideaData.views || 0) + 1
+            views: (ideaData.views || 0) + 1,
           });
         }
       } else {
@@ -142,12 +142,12 @@ const ViewIdeaDetails: React.FC = () => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
     if (!idea || !user) return;
-    
+
     setSaving(true);
     try {
       const updateData = {
@@ -158,10 +158,10 @@ const ViewIdeaDetails: React.FC = () => {
       };
 
       await updateDoc(doc(db, "businessIdeas", idea.id), updateData);
-      
-      setIdea(prev => ({ ...prev!, ...updateData }));
+
+      setIdea((prev) => ({ ...prev!, ...updateData }));
       setEditing(false);
-      
+
       toast({
         title: "Success",
         description: "Business idea updated successfully!",
@@ -169,7 +169,7 @@ const ViewIdeaDetails: React.FC = () => {
     } catch (error) {
       console.error("Error updating idea:", error);
       toast({
-        title: "Error", 
+        title: "Error",
         description: "Failed to update business idea.",
         variant: "destructive",
       });
@@ -180,17 +180,17 @@ const ViewIdeaDetails: React.FC = () => {
 
   const handleInterested = async () => {
     if (!idea || !user) return;
-    
+
     try {
       await updateDoc(doc(db, "businessIdeas", idea.id), {
-        interested: (idea.interested || 0) + 1
+        interested: (idea.interested || 0) + 1,
       });
-      
-      setIdea(prev => ({ 
-        ...prev!, 
-        interested: (prev!.interested || 0) + 1 
+
+      setIdea((prev) => ({
+        ...prev!,
+        interested: (prev!.interested || 0) + 1,
       }));
-      
+
       toast({
         title: "Success",
         description: "Marked as interested!",
@@ -205,10 +205,10 @@ const ViewIdeaDetails: React.FC = () => {
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString("en-IN", {
       day: "numeric",
-      month: "long", 
+      month: "long",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -227,8 +227,12 @@ const ViewIdeaDetails: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Idea Not Found</h2>
-          <p className="text-gray-600 mb-4">The business idea you're looking for doesn't exist.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Idea Not Found
+          </h2>
+          <p className="text-gray-600 mb-4">
+            The business idea you're looking for doesn't exist.
+          </p>
           <Link to="/dashboard">
             <Button>Back to Dashboard</Button>
           </Link>
@@ -256,13 +260,13 @@ const ViewIdeaDetails: React.FC = () => {
               <p className="text-gray-600">Business Idea Details</p>
             </div>
           </div>
-          
+
           {isOwner && (
             <div className="flex space-x-2">
               {editing ? (
                 <>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setEditing(false);
                       setFormData(idea);
@@ -301,8 +305,9 @@ const ViewIdeaDetails: React.FC = () => {
           <Alert className="mb-6 border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
-              ✅ This idea has been modified {idea.changeCount} time{idea.changeCount > 1 ? 's' : ''} | 
-              Last changed: {formatDate(idea.lastChanged)}
+              ✅ This idea has been modified {idea.changeCount} time
+              {idea.changeCount > 1 ? "s" : ""} | Last changed:{" "}
+              {formatDate(idea.lastChanged)}
             </AlertDescription>
           </Alert>
         )}
@@ -326,16 +331,20 @@ const ViewIdeaDetails: React.FC = () => {
                       <Input
                         id="title"
                         value={formData.title || ""}
-                        onChange={(e) => handleInputChange("title", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("title", e.target.value)
+                        }
                         placeholder="Enter business idea title"
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="category">Category *</Label>
-                      <Select 
-                        value={formData.category || ""} 
-                        onValueChange={(value) => handleInputChange("category", value)}
+                      <Select
+                        value={formData.category || ""}
+                        onValueChange={(value) =>
+                          handleInputChange("category", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select a category" />
@@ -355,7 +364,9 @@ const ViewIdeaDetails: React.FC = () => {
                       <Textarea
                         id="description"
                         value={formData.description || ""}
-                        onChange={(e) => handleInputChange("description", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("description", e.target.value)
+                        }
                         rows={6}
                         placeholder="Describe your business idea in detail..."
                       />
@@ -364,18 +375,26 @@ const ViewIdeaDetails: React.FC = () => {
                 ) : (
                   <>
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Title</h3>
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        Title
+                      </h3>
                       <p className="text-gray-700">{idea.title}</p>
                     </div>
 
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Category</h3>
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        Category
+                      </h3>
                       <Badge variant="secondary">{idea.category}</Badge>
                     </div>
 
                     <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
-                      <p className="text-gray-700 whitespace-pre-wrap">{idea.description}</p>
+                      <h3 className="font-semibold text-gray-900 mb-2">
+                        Description
+                      </h3>
+                      <p className="text-gray-700 whitespace-pre-wrap">
+                        {idea.description}
+                      </p>
                     </div>
                   </>
                 )}
@@ -395,16 +414,20 @@ const ViewIdeaDetails: React.FC = () => {
                       <Input
                         id="budget"
                         value={formData.budget || ""}
-                        onChange={(e) => handleInputChange("budget", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("budget", e.target.value)
+                        }
                         placeholder="e.g., ₹10-20 Lakhs"
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="timeline">Timeline *</Label>
-                      <Select 
-                        value={formData.timeline || ""} 
-                        onValueChange={(value) => handleInputChange("timeline", value)}
+                      <Select
+                        value={formData.timeline || ""}
+                        onValueChange={(value) =>
+                          handleInputChange("timeline", value)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select timeline" />
@@ -454,7 +477,9 @@ const ViewIdeaDetails: React.FC = () => {
                       <Input
                         id="targetMarket"
                         value={formData.targetMarket || ""}
-                        onChange={(e) => handleInputChange("targetMarket", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("targetMarket", e.target.value)
+                        }
                         placeholder="Who is your target audience?"
                       />
                     </div>
@@ -464,7 +489,9 @@ const ViewIdeaDetails: React.FC = () => {
                       <Textarea
                         id="revenueModel"
                         value={formData.revenueModel || ""}
-                        onChange={(e) => handleInputChange("revenueModel", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("revenueModel", e.target.value)
+                        }
                         rows={3}
                         placeholder="How will this business make money?"
                       />
@@ -475,7 +502,9 @@ const ViewIdeaDetails: React.FC = () => {
                       <Textarea
                         id="teamInfo"
                         value={formData.teamInfo || ""}
-                        onChange={(e) => handleInputChange("teamInfo", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("teamInfo", e.target.value)
+                        }
                         rows={3}
                         placeholder="Tell us about your team"
                       />
@@ -485,22 +514,32 @@ const ViewIdeaDetails: React.FC = () => {
                   <>
                     {idea.targetMarket && (
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Target Market</h3>
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          Target Market
+                        </h3>
                         <p className="text-gray-700">{idea.targetMarket}</p>
                       </div>
                     )}
 
                     {idea.revenueModel && (
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Revenue Model</h3>
-                        <p className="text-gray-700 whitespace-pre-wrap">{idea.revenueModel}</p>
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          Revenue Model
+                        </h3>
+                        <p className="text-gray-700 whitespace-pre-wrap">
+                          {idea.revenueModel}
+                        </p>
                       </div>
                     )}
 
                     {idea.teamInfo && (
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Team Information</h3>
-                        <p className="text-gray-700 whitespace-pre-wrap">{idea.teamInfo}</p>
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          Team Information
+                        </h3>
+                        <p className="text-gray-700 whitespace-pre-wrap">
+                          {idea.teamInfo}
+                        </p>
                       </div>
                     )}
                   </>
@@ -531,12 +570,14 @@ const ViewIdeaDetails: React.FC = () => {
                       <Heart className="h-4 w-4 text-gray-500" />
                       <span className="text-sm text-gray-600">Interested</span>
                     </div>
-                    <span className="font-semibold">{idea.interested || 0}</span>
+                    <span className="font-semibold">
+                      {idea.interested || 0}
+                    </span>
                   </div>
 
                   {!isOwner && (
-                    <Button 
-                      onClick={handleInterested} 
+                    <Button
+                      onClick={handleInterested}
                       className="w-full"
                       variant="outline"
                     >
@@ -561,14 +602,18 @@ const ViewIdeaDetails: React.FC = () => {
                     </div>
                     <div>
                       <p className="font-medium">{idea.authorName}</p>
-                      <p className="text-sm text-gray-500">{idea.authorEmail}</p>
+                      <p className="text-sm text-gray-500">
+                        {idea.authorEmail}
+                      </p>
                     </div>
                   </div>
 
                   {idea.authorProfile?.companyName && (
                     <div className="flex items-center space-x-2">
                       <Building className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">{idea.authorProfile.companyName}</span>
+                      <span className="text-sm text-gray-600">
+                        {idea.authorProfile.companyName}
+                      </span>
                     </div>
                   )}
 
@@ -590,10 +635,10 @@ const ViewIdeaDetails: React.FC = () => {
               <CardContent className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
-                  <Badge 
+                  <Badge
                     className={
-                      idea.status === "active" 
-                        ? "bg-green-100 text-green-800" 
+                      idea.status === "active"
+                        ? "bg-green-100 text-green-800"
                         : "bg-gray-100 text-gray-800"
                     }
                   >
@@ -603,12 +648,16 @@ const ViewIdeaDetails: React.FC = () => {
 
                 <div>
                   <p className="text-sm text-gray-600">Created</p>
-                  <p className="text-sm font-medium">{formatDate(idea.createdAt)}</p>
+                  <p className="text-sm font-medium">
+                    {formatDate(idea.createdAt)}
+                  </p>
                 </div>
 
                 <div>
                   <p className="text-sm text-gray-600">Last Updated</p>
-                  <p className="text-sm font-medium">{formatDate(idea.updatedAt)}</p>
+                  <p className="text-sm font-medium">
+                    {formatDate(idea.updatedAt)}
+                  </p>
                 </div>
 
                 {idea.tags && idea.tags.length > 0 && (
@@ -616,7 +665,11 @@ const ViewIdeaDetails: React.FC = () => {
                     <p className="text-sm text-gray-600 mb-2">Tags</p>
                     <div className="flex flex-wrap gap-1">
                       {idea.tags.map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="text-xs"
+                        >
                           {tag}
                         </Badge>
                       ))}

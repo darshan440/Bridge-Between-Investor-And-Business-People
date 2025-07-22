@@ -59,9 +59,9 @@ export const sendBulkNotifications = onCall(async (request) => {
 
     await batch.commit();
 
-    return { 
-      success: true, 
-      message: `Bulk notifications sent to ${userIds.length} users!` 
+    return {
+      success: true,
+      message: `Bulk notifications sent to ${userIds.length} users!`,
     };
   } catch (error) {
     console.error("Error sending bulk notifications:", error);
@@ -85,7 +85,10 @@ export const getUserNotifications = onCall(async (request) => {
       .limit(limit);
 
     if (lastVisible) {
-      const lastDoc = await db.collection("notifications").doc(lastVisible).get();
+      const lastDoc = await db
+        .collection("notifications")
+        .doc(lastVisible)
+        .get();
       query = query.startAfter(lastDoc);
     }
 
@@ -98,7 +101,10 @@ export const getUserNotifications = onCall(async (request) => {
     return {
       notifications,
       hasMore: snapshot.docs.length === limit,
-      lastVisible: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1].id : null,
+      lastVisible:
+        snapshot.docs.length > 0
+          ? snapshot.docs[snapshot.docs.length - 1].id
+          : null,
     };
   } catch (error) {
     console.error("Error getting notifications:", error);
@@ -202,7 +208,9 @@ export const notifyInvestorsAboutNewIdea = onCall(async (request) => {
 
       await batch.commit();
 
-      console.log(`Notified ${investorIds.length} investors about new business idea`);
+      console.log(
+        `Notified ${investorIds.length} investors about new business idea`,
+      );
 
       return {
         success: true,
@@ -228,19 +236,19 @@ export const notifyBusinessPersonAboutInvestment = onCall(async (request) => {
     throw new Error("User must be authenticated.");
   }
 
-  const { 
-    businessPersonId, 
-    businessIdeaId, 
-    businessIdeaTitle, 
-    investorName, 
-    amount 
+  const {
+    businessPersonId,
+    businessIdeaId,
+    businessIdeaTitle,
+    investorName,
+    amount,
   } = request.data;
 
   try {
     await db.collection("notifications").add({
       userId: businessPersonId,
       title: "New Investment Received",
-      body: `${investorName} has invested ₹${amount.toLocaleString('en-IN')} in your business idea: "${businessIdeaTitle}"`,
+      body: `${investorName} has invested ₹${amount.toLocaleString("en-IN")} in your business idea: "${businessIdeaTitle}"`,
       type: "INVESTMENT_RECEIVED",
       data: {
         businessIdeaId,

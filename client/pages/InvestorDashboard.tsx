@@ -78,7 +78,7 @@ const InvestorDashboard: React.FC = () => {
 
   const categories = [
     "Technology",
-    "Healthcare", 
+    "Healthcare",
     "Finance",
     "Education",
     "E-commerce",
@@ -124,7 +124,13 @@ const InvestorDashboard: React.FC = () => {
 
   useEffect(() => {
     filterIdeas();
-  }, [businessIdeas, searchTerm, selectedCategory, selectedFilter, ratingFilter]);
+  }, [
+    businessIdeas,
+    searchTerm,
+    selectedCategory,
+    selectedFilter,
+    ratingFilter,
+  ]);
 
   const filterIdeas = () => {
     let filtered = [...businessIdeas];
@@ -150,7 +156,9 @@ const InvestorDashboard: React.FC = () => {
         filtered = filtered.filter((idea) => idea.featured);
         break;
       case "most_liked":
-        filtered = filtered.sort((a, b) => (b.likes?.length || 0) - (a.likes?.length || 0));
+        filtered = filtered.sort(
+          (a, b) => (b.likes?.length || 0) - (a.likes?.length || 0),
+        );
         break;
       case "most_viewed":
         filtered = filtered.sort((a, b) => (b.views || 0) - (a.views || 0));
@@ -203,7 +211,9 @@ const InvestorDashboard: React.FC = () => {
     try {
       const ideaRef = doc(db, "businessIdeas", ideaId);
       await updateDoc(ideaRef, {
-        interested: (businessIdeas.find(idea => idea.id === ideaId)?.interested || 0) + 1,
+        interested:
+          (businessIdeas.find((idea) => idea.id === ideaId)?.interested || 0) +
+          1,
       });
     } catch (error) {
       console.error("Error marking interested:", error);
@@ -230,7 +240,9 @@ const InvestorDashboard: React.FC = () => {
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-16">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading investment opportunities...</p>
+            <p className="mt-4 text-gray-600">
+              Loading investment opportunities...
+            </p>
           </div>
         </div>
       </div>
@@ -282,7 +294,10 @@ const InvestorDashboard: React.FC = () => {
               </div>
 
               {/* Category Filter */}
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
@@ -394,7 +409,9 @@ const InvestorDashboard: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="text-xs text-gray-500">Budget</p>
-                      <p className="font-semibold text-sm">{formatBudget(idea.budget)}</p>
+                      <p className="font-semibold text-sm">
+                        {formatBudget(idea.budget)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Timeline</p>
@@ -482,11 +499,15 @@ const InvestorDashboard: React.FC = () => {
                 No Investment Opportunities Found
               </h3>
               <p className="text-gray-600 mb-6">
-                {searchTerm || selectedCategory !== "all" || selectedFilter !== "all"
+                {searchTerm ||
+                selectedCategory !== "all" ||
+                selectedFilter !== "all"
                   ? "Try adjusting your filters to see more opportunities."
                   : "No business ideas are available for investment at the moment. Check back later for new opportunities."}
               </p>
-              {(searchTerm || selectedCategory !== "all" || selectedFilter !== "all") && (
+              {(searchTerm ||
+                selectedCategory !== "all" ||
+                selectedFilter !== "all") && (
                 <Button
                   variant="outline"
                   onClick={() => {
