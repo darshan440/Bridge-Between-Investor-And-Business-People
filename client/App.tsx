@@ -147,4 +147,15 @@ window.addEventListener("unhandledrejection", (event) => {
 // Initialize the app
 initializeApp();
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Prevent multiple root creation during hot reload
+const container = document.getElementById("root")!;
+let root: any;
+
+if (!container._reactRootContainer) {
+  root = createRoot(container);
+  container._reactRootContainer = root;
+} else {
+  root = container._reactRootContainer;
+}
+
+root.render(<App />);
