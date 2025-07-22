@@ -10,6 +10,12 @@ import { onCall } from "firebase-functions/v2/https";
 import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
 import { setUserRole } from "./auth";
 import {
+  createInvestmentProposal,
+  acceptInvestmentProposal,
+  getMyProposals,
+  getMyInvestments,
+} from "./investments";
+import {
   cleanupOldNotifications,
   getUserNotifications,
   markNotificationAsRead,
@@ -73,6 +79,14 @@ export {
 
 // Analytics and automation functions
 export { generateRiskAssessment, updatePortfolioMetrics };
+
+// Investment functions
+export {
+  createInvestmentProposal,
+  acceptInvestmentProposal,
+  getMyProposals,
+  getMyInvestments,
+};
 
 import { onSchedule } from "firebase-functions/v2/scheduler";
 
