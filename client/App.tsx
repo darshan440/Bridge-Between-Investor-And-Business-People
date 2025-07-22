@@ -25,6 +25,7 @@ import Profile from "./pages/Profile";
 import MyInvestments from "./pages/MyInvestments";
 import PostAdvice from "./pages/PostAdvice";
 import ViewQueries from "./pages/ViewQueries";
+import ViewIdeaDetails from "./pages/ViewIdeaDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               {/* Business Person Routes */}
               <Route path="/post-idea" element={<PostIdea />} />
+              <Route path="/idea/:id" element={<ViewIdeaDetails />} />
               <Route
                 path="/advisor-suggestions"
                 element={<ViewAdvisorSuggestions />}
