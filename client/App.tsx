@@ -158,7 +158,9 @@ initializeApp();
 const container = document.getElementById("root");
 
 if (!container) {
-  throw new Error("Root container not found. Make sure you have a div with id='root' in your HTML.");
+  throw new Error(
+    "Root container not found. Make sure you have a div with id='root' in your HTML.",
+  );
 }
 
 let root: any;
