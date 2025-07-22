@@ -10,11 +10,11 @@ const corsOptions = {
 // Role configuration - ideally this would be loaded from Firestore or a config service
 const roleConfig = {
   roleMatrix: {
-    user: ["investor", "business_person", "business_advisor"],
+    user: ["investor", "business_person", "business_advisor", "banker"],
     investor: ["user", "business_person", "business_advisor", "banker"],
     business_person: ["user", "investor", "business_advisor", "banker"],
     business_advisor: ["user", "investor", "business_person", "banker"],
-    banker: ["business_person", "investor", "business_advisor"],
+    banker: ["user", "business_person", "investor", "business_advisor"],
     admin: [],
   },
   roleDescriptions: {
