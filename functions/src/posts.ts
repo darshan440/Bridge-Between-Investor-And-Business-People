@@ -137,7 +137,7 @@ export const postBusinessIdea = onCall<BusinessIdeaData>(async (request) => {
     });
 
     // Send notification to potential investors
-    await notifyPotentialInvestors(businessIdeaRef.id, category, title);
+    await notifyPotentialInvestors(businessIdeaRef.id, title, category, userProfile.displayName || "Anonymous");
 
     return {
       success: true,
@@ -421,8 +421,9 @@ function extractTags(description: string, category: string): string[] {
 // Helper function to notify potential investors about new business ideas
 async function notifyPotentialInvestors(
   businessIdeaId: string,
-  category: string,
   title: string,
+  category: string,
+  authorName: string,
 ) {
   try {
     // Get investors who might be interested in this category
