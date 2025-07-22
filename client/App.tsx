@@ -155,14 +155,33 @@ window.addEventListener("unhandledrejection", (event) => {
 initializeApp();
 
 // Prevent multiple root creation during hot reload
-const container = document.getElementById("root")!;
-let root: any;
+const container = document.getElementById("root");
 
-if (!container._reactRootContainer) {
-  root = createRoot(container);
-  container._reactRootContainer = root;
-} else {
-  root = container._reactRootContainer;
+if (!container) {
+  throw new Error("Root container not found. Make sure you have a div with id='root' in your HTML.");
 }
 
-root.render(<App />);
+let root: any;
+
+// Check if root already exists (for hot reload scenarios)
+if (!container._reactRootContainer) {
+  try {
+    root = createRoot(container);
+    container._reactRootContainer = root;
+    console.log("✅ React root created successfully");
+  } catch (error) {
+    console.error("❌ Error creating React root:", error);
+    throw error;
+  }
+} else {
+  root = container._reactRootContainer;
+  console.log("♻️ Reusing existing React root");
+}
+
+// Render the app
+try {
+  root.render(<App />);
+} catch (error) {
+  console.error("❌ Error rendering App:", error);
+  throw error;
+}
