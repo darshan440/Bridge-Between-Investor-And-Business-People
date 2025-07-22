@@ -444,8 +444,8 @@ async function notifyPotentialInvestors(
       ) {
         return db.collection("notifications").add({
           userId: doc.id,
-          title: "New Business Opportunity",
-          body: `A new ${category} business idea "${title}" is looking for investment.`,
+          title: "New Investment Opportunity",
+          body: `${authorName} posted a new business idea in ${category}: "${title}"`,
           type: "NEW_BUSINESS_IDEA",
           data: {
             businessIdeaId,
