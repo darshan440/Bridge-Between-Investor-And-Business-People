@@ -13,6 +13,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { UserDashboard } from "@/components/UserDashboard";
 import { getCurrentUserProfile, isProfileCompletionRequired } from "@/lib/auth";
+import { getDummyDashboardData } from "@/lib/dummyData";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -42,7 +43,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { getDummyDashboardData } from "@/lib/dummyData";
+
 // Loading component instead of react-spinners
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center">
@@ -117,6 +118,8 @@ const roleConfigs = {
         href: "/advisor-suggestions",
       },
       { label: "Query Panel", icon: FileText, href: "/query-panel" },
+      { label: "Create Loan Proposal", icon: FileText, href: "/create-loan-proposal" },
+
     ],
   },
   investor: {
@@ -127,11 +130,6 @@ const roleConfigs = {
         label: "View Business Ideas",
         icon: Lightbulb,
         href: "/view-proposals",
-      },
-      {
-        label: "My Investments",
-        icon: DollarSign,
-        href: "/my-investments",
       },
       { label: "Portfolio Tracking", icon: TrendingUp, href: "/portfolio" },
     ],
@@ -194,6 +192,12 @@ export default function Dashboard() {
 
     const userRole =
       location.state?.role || localStorage.getItem("userRole") || "user";
+    console.log(
+      location.state?.role,
+      "from location state",
+      localStorage.getItem("userRole"),
+    );
+
     setRole(userRole);
     if (userRole) {
       localStorage.setItem("userRole", userRole);
@@ -227,7 +231,7 @@ export default function Dashboard() {
     if (!userProfile?.uid) return;
 
     const unsubscribers: (() => void)[] = [];
-
+    console.log("Current dashboard role:", role);
     // Setup real-time listeners based on role
     switch (role) {
       case "business_person":
@@ -401,7 +405,7 @@ export default function Dashboard() {
       }));
 
       // Get advisor's solutions
-      const solutionsRef = collection(db, "solutions");
+      const solutionsRef = collection(db, "advisorSuggestions");
       const solutionsQuery = query(
         solutionsRef,
         where("advisorId", "==", userProfile.uid),

@@ -63,6 +63,52 @@ export interface BusinessIdea {
   updatedAt: FirebaseFirestore.Timestamp;
 }
 
+export interface LoanProposalData {
+  // 1. Loan Details
+  loanPurpose: string; // Why the loan is needed
+  loanAmount: string; // Exact amount requested
+  repaymentPlan: {
+    repaymentPeriod: string; // e.g., "5 years"
+    interestRate: string; // e.g., "10%"
+    incomeSources: string; // Description of sources for repayment
+  };
+  collateral?: {
+    description: string; // Description of collateral assets
+    estimatedValue: string; // Financial value of collateral
+  }[];
+
+  // 2. Business Information
+  businessOverview: {
+    history: string;
+    legalStructure: string;
+    productsOrServices: string;
+    targetMarket: string;
+  };
+  financialInformation: {
+    incomeStatements: string; // Or links to documents
+    balanceSheets: string;
+    cashFlowProjections: string;
+  };
+  marketAnalysis: string;
+  managementTeam: string;
+
+  // 3. Supporting Documents
+  supportingDocuments: {
+    personalAndBusinessDocs: string[]; // e.g., PAN card, business license identifiers or URLs
+    financialRecords: string[]; // e.g., bank statements, tax returns URLs
+    quotationsAndInvoices?: string[]; // Optional
+    otherDocuments?: string[]; // Optional
+  };
+
+  // 4. Executive Summary
+  executiveSummary: string;
+
+  createdAt?: any;
+  updatedAt?: any;
+  status?: string; // e.g., "pending", "reviewed", "approved"
+  userId?: string; // owner of the proposal
+}
+
 export interface UserProfile {
   id: string;
   email: string;

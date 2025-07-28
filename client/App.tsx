@@ -1,6 +1,16 @@
 import "./global.css";
 
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/lib/AuthContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
+import Index from "./pages/Index";
 
 // Extend HTMLElement to include _reactRootContainer property
 declare global {
@@ -8,32 +18,24 @@ declare global {
     _reactRootContainer?: any;
   }
 }
-import { createRoot } from "react-dom/client";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/lib/AuthContext";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import PostIdea from "./pages/PostIdea";
-import ViewProposals from "./pages/ViewProposals";
-import PostSolution from "./pages/PostSolution";
-import QueryPanel from "./pages/QueryPanel";
-import PostLoanSchemes from "./pages/PostLoanSchemes";
-import ViewAdvisorSuggestions from "./pages/ViewAdvisorSuggestions";
+
 import Browse from "./pages/Browse";
 import Categories from "./pages/Categories";
-import Help from "./pages/Help";
 import CompleteProfile from "./pages/CompleteProfile";
-import Profile from "./pages/Profile";
+import Help from "./pages/Help";
 import MyInvestments from "./pages/MyInvestments";
-import PostAdvice from "./pages/PostAdvice";
-import ViewQueries from "./pages/ViewQueries";
-import ViewIdeaDetails from "./pages/ViewIdeaDetails";
+import PostIdea from "./pages/PostIdea";
+import PostLoanSchemes from "./pages/PostLoanSchemes";
+import PostSolution from "./pages/PostSolution";
+import Profile from "./pages/Profile";
+import QueryPanel from "./pages/QueryPanel";
+import ViewAdvisorSuggestions from "./pages/ViewAdvisorSuggestions";
+import ViewProposals from "./pages/ViewProposals";
+
 import NotFound from "./pages/NotFound";
+import PostAdvice from "./pages/PostAdvice";
+import ViewIdeaDetails from "./pages/ViewIdeaDetails";
+import ViewQueries from "./pages/ViewQueries";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,7 +75,7 @@ const App = () => (
               <Route path="/query-panel" element={<QueryPanel />} />
               {/* Investor Routes */}
               <Route path="/view-proposals" element={<ViewProposals />} />
-              <Route path="/my-investments" element={<MyInvestments />} />
+
               <Route path="/portfolio" element={<MyInvestments />} />
               {/* Business Advisor Routes */}
               <Route path="/post-advice" element={<PostAdvice />} />

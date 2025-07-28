@@ -17,15 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  changeUserRole,
+  isProfileCompletionRequired,
   registerUser,
   resetPassword,
   signInUser,
-  changeUserRole,
-  isProfileCompletionRequired,
 } from "@/lib/auth";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { USER_ROLES, UserRole, isFirebaseEnabled } from "@/lib/firebase";
+import { USER_ROLES, UserRole, auth, isFirebaseEnabled } from "@/lib/firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { ArrowLeft, Building, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -53,7 +52,8 @@ export default function Auth() {
 
       // Create/update user profile in Firestore
       const { setDoc, doc } = await import("firebase/firestore");
-      const { db, serverTimestamp } = await import("@/lib/firebase");
+      const { db } = await import("@/lib/firebase");
+      const { serverTimestamp } = await import("firebase/firestore");
 
       await setDoc(
         doc(db, "users", user.uid),
@@ -72,8 +72,7 @@ export default function Auth() {
 
       // Set user role if specified
       if (formData.role) {
-        const { setUserRole } = await import("@/lib/auth");
-        await setUserRole(user.uid, formData.role);
+        await changeUserRole(formData.role);
       }
 
       const finalRole = formData.role || "user";
@@ -105,7 +104,7 @@ export default function Auth() {
 
         // Handle role selection during login
         let finalRole = userProfile.role;
-
+        localStorage.setItem("userRole", finalRole);
         if (formData.role && formData.role !== userProfile.role) {
           // Validate role change is allowed
           const allowedRoles = [
@@ -130,7 +129,8 @@ export default function Auth() {
               // Change role using the role management function
               const roleChangeResult = await changeUserRole(formData.role);
               if (roleChangeResult.success) {
-                finalRole = roleChangeResult.newRole;
+                finalRole = roleChangeResult.newRole as UserRole;
+                localStorage.setItem("userRole", finalRole);
                 console.log("Role changed during login:", finalRole);
               }
             } catch (roleError: any) {

@@ -10,18 +10,12 @@ import { onCall } from "firebase-functions/v2/https";
 import { generateRiskAssessment, updatePortfolioMetrics } from "./analytics";
 import { setUserRole } from "./auth";
 import {
-  createInvestmentProposal,
   acceptInvestmentProposal,
-  getMyProposals,
+  createInvestmentProposal,
   getMyInvestments,
+  getMyProposals,
 } from "./investments";
-import {
-  cleanupOldNotifications,
-  getUserNotifications,
-  markNotificationAsRead,
-  sendBulkNotifications,
-  sendNotification,
-} from "./notifications";
+import { createLoanProposal } from "./loanProposals";
 import {
   completeUserProfile,
   getProfileCompletionStatus,
@@ -39,7 +33,6 @@ import {
   onQueryCreated,
   onResponseCreated,
 } from "./triggers";
-
 // Authentication functions
 export { setUserRole };
 
@@ -58,6 +51,7 @@ export {
   postSolution,
 } from "./posts";
 
+export { createLoanProposal };
 // Firestore trigger functions
 export {
   onAdvisorSuggestionCreated,
@@ -82,10 +76,10 @@ export { generateRiskAssessment, updatePortfolioMetrics };
 
 // Investment functions
 export {
-  createInvestmentProposal,
   acceptInvestmentProposal,
-  getMyProposals,
+  createInvestmentProposal,
   getMyInvestments,
+  getMyProposals,
 };
 
 import { onSchedule } from "firebase-functions/v2/scheduler";

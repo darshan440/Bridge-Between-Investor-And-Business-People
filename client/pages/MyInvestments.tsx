@@ -67,7 +67,7 @@ interface PortfolioMetrics {
 }
 
 const MyInvestments: React.FC = () => {
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [metrics, setMetrics] = useState<PortfolioMetrics>({
     totalInvested: 0,
@@ -81,13 +81,14 @@ const MyInvestments: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
+
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!currentUser?.uid) return;
 
     const investmentsRef = collection(db, "investments");
     const investmentsQuery = query(
       investmentsRef,
-      where("investorId", "==", user.uid),
+      where("investorId", "==", currentUser.uid),
       orderBy("investmentDate", "desc"),
     );
 
@@ -112,7 +113,7 @@ const MyInvestments: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, [currentUser?.uid]);
 
   const calculateMetrics = (investmentsList: Investment[]) => {
     const totalInvested = investmentsList.reduce(

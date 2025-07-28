@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { BankerAdvisorForm } from "@/components/forms/BankerAdvisorForm";
+import { BusinessPersonForm } from "@/components/forms/BusinessPersonForm";
+import { InvestorForm } from "@/components/forms/InvestorForm";
 import {
   Card,
   CardContent,
@@ -8,16 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getCurrentUserProfile } from "@/lib/auth";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "@/lib/firebase";
-import { UserRole } from "@/lib/firebase";
-import { BusinessPersonForm } from "@/components/forms/BusinessPersonForm";
-import { InvestorForm } from "@/components/forms/InvestorForm";
-import { BankerAdvisorForm } from "@/components/forms/BankerAdvisorForm";
 import { useToast } from "@/components/ui/use-toast";
+import { getCurrentUserProfile } from "@/lib/auth";
+import { functions, UserRole } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
 import { ArrowLeft, CheckCircle, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 interface CompleteProfileData {
   fullName: string;
@@ -109,10 +106,6 @@ export default function CompleteProfile() {
   }
 
   // Users and admins don't need profile completion
-  if (userRole === "user" || "admin") {
-    navigate("/dashboard");
-    return null;
-  }
 
   const getRoleTitle = (role: UserRole) => {
     switch (role) {
@@ -199,7 +192,7 @@ export default function CompleteProfile() {
               <CheckCircle className="w-5 h-5 text-blue-600" />
               <span className="text-blue-800 font-medium">Almost Done!</span>
             </div>
-          </div>  
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {getRoleTitle(userRole)}
           </h1>

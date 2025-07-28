@@ -38,6 +38,8 @@ interface PostSolutionData {
   solution: string;
 }
 
+
+
 // Post business idea
 export const postBusinessIdea = onCall<BusinessIdeaData>(async (request) => {
   if (!request.auth) {
@@ -395,6 +397,8 @@ export const postSolution = onCall<PostSolutionData>(async (request) => {
   }
 });
 
+
+
 // Helper function to extract tags from description and category
 function extractTags(description: string, category: string): string[] {
   const tags = [category];
@@ -573,8 +577,6 @@ export const getBusinessIdeas = onCall<{
     throw new Error("Failed to get business ideas.");
   }
 });
-
-// Get loan schemes with filtering
 export const getLoanSchemes = onCall<{
   loanType?: string;
   search?: string;

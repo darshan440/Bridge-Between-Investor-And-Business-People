@@ -28,23 +28,35 @@ service cloud.firestore {
 
     // Users collection - users can read/write their own profile
     match /users/{userId} {
-  allow read: if request.auth != null && request.auth.uid == userId;
-  allow write: if request.auth != null && request.auth.uid == userId;
+  allow read, write: if request.auth != null;
   allow create: if request.auth != null && request.auth.uid == userId;
 }
 
 
-    // Business Ideas collection
-    match /businessIdeas/{ideaId} {
+  match /businessIdeas/{ideaId} {
   allow get: if isAuthenticated() && (
-    resource.data.status == 'published' || 
-    isOwner(resource.data.userId)
+    resource.data.status == 'active' || 
+    request.auth.uid == resource.data.userId
   );
-  allow list: if isAuthenticated() && hasRole('business_person');
-  allow create: if hasRole('business_person') && 
+
+  allow list: if isAuthenticated();
+
+  allow create: if hasRole('business_person') &&
                    request.auth.uid == request.resource.data.userId;
-  allow update, delete: if isOwner(resource.data.userId);
+ allow update: if request.auth.uid == resource.data.userId && hasRole('business_person');
+
+  // Allow anyone to increment views — restrict to only `views` field
+ allow update: if request.auth != null &&
+  request.resource.data.diff(resource.data).affectedKeys()
+    .hasOnly(['views']) ||
+  request.resource.data.diff(resource.data).affectedKeys()
+    .hasOnly(['interested']) ||
+  request.resource.data.diff(resource.data).affectedKeys()
+    .hasOnly(['views', 'interested']);
+
 }
+
+
 
 
     // Investment Proposals collection
@@ -62,6 +74,12 @@ service cloud.firestore {
       
       // Only the investor who created it can delete
       allow delete: if isOwner(resource.data.investorId);
+    }
+
+    match /investments/{docId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.investorId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.investorId;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.investorId;
     }
 
     // Queries collection
@@ -106,7 +124,9 @@ service cloud.firestore {
     // Loan Schemes collection
     match /loanSchemes/{schemeId} {
       // Anyone authenticated can read active loan schemes
-      allow read: if isAuthenticated() && resource.data.status == 'active';
+      allow read: if isAuthenticated() && resource.data.status == 'active'|| 
+    request.auth.uid == resource.data.userId;
+    
       // Only bankers can create loan schemes
       allow create: if hasRole('banker') && 
                        request.auth.uid == request.resource.data.bankerId;

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,10 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -18,27 +17,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/lib/AuthContext";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import {
   ArrowLeft,
+  Building,
+  Calendar,
+  CheckCircle,
+  DollarSign,
   Edit,
-  Save,
-  X,
   Eye,
   Heart,
   MessageSquare,
-  DollarSign,
-  Calendar,
+  Save,
   User,
-  Building,
-  CheckCircle,
-  Clock,
+  X,
 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { useAuth } from "@/lib/AuthContext";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 interface BusinessIdea {
   id: string;
@@ -68,7 +67,7 @@ interface BusinessIdea {
 const ViewIdeaDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const { toast } = useToast();
 
   const [idea, setIdea] = useState<BusinessIdea | null>(null);
@@ -116,7 +115,7 @@ const ViewIdeaDetails: React.FC = () => {
         setFormData(ideaData);
 
         // Increment view count if not the owner
-        if (user?.uid !== ideaData.userId) {
+        if (currentUser?.uid !== ideaData.userId) {
           await updateDoc(doc(db, "businessIdeas", id!), {
             views: (ideaData.views || 0) + 1,
           });
@@ -130,7 +129,7 @@ const ViewIdeaDetails: React.FC = () => {
         navigate("/dashboard");
       }
     } catch (error) {
-      console.error("Error loading idea:", error);
+      console.error("Error loading idea:", error); //got error here
       toast({
         title: "Error",
         description: "Failed to load business idea details.",
@@ -146,7 +145,7 @@ const ViewIdeaDetails: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!idea || !user) return;
+    if (!idea || !currentUser) return;
 
     setSaving(true);
     try {
@@ -179,7 +178,7 @@ const ViewIdeaDetails: React.FC = () => {
   };
 
   const handleInterested = async () => {
-    if (!idea || !user) return;
+    if (!idea || !currentUser) return;
 
     try {
       await updateDoc(doc(db, "businessIdeas", idea.id), {
@@ -196,7 +195,7 @@ const ViewIdeaDetails: React.FC = () => {
         description: "Marked as interested!",
       });
     } catch (error) {
-      console.error("Error marking interested:", error);
+      console.error("Error marking interested:", error); // got error here 
     }
   };
 
@@ -241,7 +240,9 @@ const ViewIdeaDetails: React.FC = () => {
     );
   }
 
-  const isOwner = user?.uid === idea.userId;
+  const isOwner =
+    idea ? id === currentUser?.uid &&
+      userProfile?.role === "business_person" : false;
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -18,275 +18,63 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
-import { functions } from "@/lib/firebase";
-import { httpsCallable } from "firebase/functions";
-import { ArrowLeft, DollarSign, Shield, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, DollarSign, Link, Shield, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 // Mock data for existing loan schemes
-const mockLoanSchemes = [
-  {
-    id: 1,
-    name: "MSME Growth Loan",
-    bank: "State Bank of India",
-    minAmount: "₹5,00,000",
-    maxAmount: "₹50,00,000",
-    interestRate: "8.5% - 12%",
-    tenure: "1-7 years",
-    category: "MSME",
-    applications: 45,
-    approved: 32,
-  },
-  {
-    id: 2,
-    name: "Startup Funding Scheme",
-    bank: "HDFC Bank",
-    minAmount: "₹10,00,000",
-    maxAmount: "₹2,00,00,000",
-    interestRate: "9% - 14%",
-    tenure: "3-10 years",
-    category: "Startup",
-    applications: 23,
-    approved: 15,
-  },
-  {
-    id: 3,
-    name: "Women Entrepreneur Loan",
-    bank: "ICICI Bank",
-    minAmount: "₹2,00,000",
-    maxAmount: "₹25,00,000",
-    interestRate: "7.5% - 11%",
-    tenure: "2-5 years",
-    category: "Women Entrepreneurship",
-    applications: 67,
-    approved: 45,
-  },
-];
+type Props = {};
 
-export default function PostLoanSchemes() {
-  const [formData, setFormData] = useState({
-    schemeName: "",
-    bankName: "",
-    schemeType: "",
-    minAmount: "",
-    maxAmount: "",
-    interestRateMin: "",
-    interestRateMax: "",
-    tenureMin: "",
-    tenureMax: "",
-    description: "",
-    eligibility: "",
-    documents: "",
-    features: [] as string[],
-    collateralRequired: false,
-    processingFee: "",
-    processingTime: "",
-  });
+export default function createLoanProposals(props: Props) {
+  const [formData, setFormData] = useState({});
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // automatically fill drafted data
-  useEffect(() => {
-    const savedDraft = localStorage.getItem("loanSchemeDraft");
-    if (savedDraft) {
-      setFormData(JSON.parse(savedDraft));
-      toast({
-        title: "Draft Loaded",
-        description: "Your saved draft has been loaded successfully.",
-        variant: "default",
-        duration: 2000,
-      });
-    }
-    return () => {};
-  }, []);
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (
-      !formData.schemeName ||
-      !formData.schemeType ||
-      !formData.minAmount ||
-      !formData.maxAmount ||
-      !formData.interestRateMin ||
-      !formData.description
-    ) {
-      toast({
-        title: "Missing Required Fields",
-        description: "Please fill in all required fields (marked with *).",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const postLoanScheme = httpsCallable(functions, "postLoanScheme");
-      const result = await postLoanScheme({
-        schemeName: formData.schemeName,
-        loanType: formData.schemeType,
-        minAmount: formData.minAmount,
-        maxAmount: formData.maxAmount,
-        interestRate: `${formData.interestRateMin}${formData.interestRateMax ? `-${formData.interestRateMax}` : ""}%`,
-        tenure: `${formData.tenureMin}${formData.tenureMax ? `-${formData.tenureMax}` : ""} years`,
-        description: formData.description,
-        eligibility: formData.eligibility,
-        features: formData.features,
-        collateralRequired: formData.collateralRequired,
-        processingFee: formData.processingFee,
-        processingTime: formData.processingTime,
-      });
-
-      const data = result.data as {
-        success: boolean;
-        message: string;
-        loanSchemeId: string;
-      };
-
-      if (data.success) {
-        toast({
-          title: "Success!",
-          description: data.message,
-          className: "bg-green-50 border-green-200",
-        });
-
-        // Reset form
-        setFormData({
-          schemeName: "",
-          schemeType: "",
-          minAmount: "",
-          maxAmount: "",
-          interestRateMin: "",
-          interestRateMax: "",
-          tenureMin: "",
-          tenureMax: "",
-          description: "",
-          eligibility: "",
-          documents: "",
-          features: [],
-          collateralRequired: false,
-          processingFee: "",
-          processingTime: "",
-          bankName: "",
-        });
-
-        // Redirect to dashboard after a short delay
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 1500);
-      }
-    } catch (error: any) {
-      console.error("Error posting loan scheme:", error);
-      toast({
-        title: "Error",
-        description:
-          error.message || "Failed to post loan scheme. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleSaveDraft = () => {
-    try {
-      localStorage.setItem("loanSchemeDraft", JSON.stringify(formData));
-      toast({
-        title: "Draft Saved",
-        description: "Your loan scheme draft has been saved successfully.",
-        variant: "default",
-      });
-    } catch (error) {
-      toast({
-        title: "Error Saving Draft",
-        description: "Failed to save your draft. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleFeatureChange = (feature: string, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      features: checked
-        ? [...prev.features, feature]
-        : prev.features.filter((f) => f !== feature),
-    }));
-  };
-
-  const schemeTypes = [
-    "MSME Loan",
-    "Startup Funding",
-    "Working Capital",
-    "Term Loan",
-    "Equipment Financing",
-    "Women Entrepreneurship",
-    "Export Finance",
-    "Agriculture Business",
-    "Technology Loan",
-    "Green Energy Loan",
-  ];
-
-  const loanFeatures = [
-    "No Processing Fee",
-    "Quick Approval",
-    "Flexible Repayment",
-    "Part Prepayment Allowed",
-    "No Hidden Charges",
-    "Digital Documentation",
-    "Doorstep Service",
-    "24/7 Support",
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/dashboard"
-                className="flex items-center text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Dashboard
-              </Link>
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center space-x-4">
+                <Link
+                  to="/dashboard"
+                  className="flex items-center text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </div>
+              <div className="flex items-center space-x-2">
+                <DollarSign className="w-6 h-6 text-blue-600" />
+                <h1 className="text-xl font-semibold text-gray-900">
+                  Write Loan Proposal
+                </h1>
+              </div>
+              <div></div>
             </div>
-            <div className="flex items-center space-x-2">
-              <DollarSign className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">
-                Post Loan Schemes
-              </h1>
-            </div>
-            <div></div>
           </div>
         </div>
       </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Create New Loan Scheme
+            Write Loan Proposal
           </h1>
           <p className="text-gray-600">
             Design and publish loan schemes to help entrepreneurs and businesses
             access funding.
           </p>
         </div>
-
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Form */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Loan Scheme Details</CardTitle>
+                <CardTitle>Loan Proposal Details</CardTitle>
                 <CardDescription>
                   Provide comprehensive information about your loan offering
                 </CardDescription>

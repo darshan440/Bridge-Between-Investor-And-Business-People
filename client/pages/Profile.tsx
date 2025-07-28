@@ -217,7 +217,7 @@ export default function Profile() {
     }
   };
 
-  const canChangeRole = profile?.role !== "banker" && profile?.role !== "admin";
+  const canChangeRole = profile?.role !== "banker" && "admin";
 
   if (!profile) {
     return (
