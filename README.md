@@ -6,8 +6,12 @@
 
 InvestBridge is a modern web application that connects visionary entrepreneurs with smart investors, featuring role-based authentication, real-time notifications, and comprehensive business management tools.
 
+  🔗 Live Demo
 
 [![Live Demo](https://img.shields.io/badge/LIVE-DEMO-green?style=for-the-badge&logo=firebase)](https://investbridge-9720e.web.app)
+
+👉 [Click here to view the live site](https://investbridge-9720e.web.app)
+
 
 ## 🚀 Features
 
