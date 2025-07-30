@@ -1,8 +1,13 @@
-# InvestBridge - Firebase-Powered Investment Platform
+
+
+# 🏢 InvestBridge - Firebase-Powered Investment Platform
 
 > **Bridge Between Investors and Business People**
 
 InvestBridge is a modern web application that connects visionary entrepreneurs with smart investors, featuring role-based authentication, real-time notifications, and comprehensive business management tools.
+
+
+[![Live Demo](https://img.shields.io/badge/LIVE-DEMO-green?style=for-the-badge&logo=firebase)](https://investbridge-9720e.web.app)
 
 ## 🚀 Features
 
